@@ -44,11 +44,16 @@ first launch requires right-click → **Open** (or `xattr -dr com.apple.quaranti
 
 ```powershell
 ./src-tauri/build-native.ps1     # -> dist/Float Reader.exe + WebView2Loader.dll
-npm run package                  # NSIS installer, once the toolchain is verified
+npm run package                  # NSIS installer (targets pinned by tauri.windows.conf.json)
 ```
 
 Keep `WebView2Loader.dll` beside the `.exe`. The executable embeds the reader interface and needs
 no development server.
+
+Each platform narrows its own bundle targets, so neither inherits the other's installers:
+`tauri.windows.conf.json` pins `["nsis"]` (unchanged from before the macOS work) and
+`tauri.macos.conf.json` pins `["app", "dmg"]`. The base `tauri.conf.json` stays neutral with
+`"all"`.
 
 `npm ci` and every production build run the checked-in foliate sandbox patch and copy PDF
 fonts/CMaps/WASM locally. Do not skip this step. No runtime CDN is used.
@@ -80,6 +85,14 @@ full IPC surface. On macOS, WKWebView exposes no CDP endpoint, so it verifies la
 clean quit, and skips the transport assertions with an explicit reason. Quit any running instance
 first: `tauri-plugin-single-instance` makes a second launch hand off and exit immediately, which
 cannot be distinguished from a failure.
+
+> **Windows build status.** The Windows path is preserved intentionally and has not been
+> regressed: `build-native.ps1` is byte-identical to before the macOS work, the Windows window-frame
+> code is verbatim, `capabilities/` and the catalog/state/indexing modules are untouched, and NSIS
+> targeting is pinned back to exactly `["nsis"]`. The macOS work added only `cfg`-gated branches.
+> However, the Windows binary was not rebuilt or re-tested during the macOS port because no Windows
+> machine or cross-compilation toolchain was available — treat a Windows rebuild as the first step
+> before the next Windows release.
 
 ## Reading
 
