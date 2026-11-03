@@ -1,0 +1,280 @@
+# Release builds for Float Reader.
+#
+# Pushing a tag such as v0.1.0 builds the Windows installer, a portable Windows
+# zip and an Apple silicon .dmg, then opens a DRAFT GitHub Release with those
+# files, SHA256SUMS.txt and notes rendered from .github/release-notes.md. A
+# person reviews and publishes the draft; nothing here publishes it.
+#
+# Running the workflow by hand (workflow_dispatch) is a dry run by default: it
+# builds everything and keeps it as workflow artifacts, and creates no release.
+#
+# The build steps are the ones ci.yml already proves on every push. Tests are
+# not repeated here; tag a commit whose CI run is green. No caches are restored,
+# so a release is built only from the tagged sources and the lockfiles. No
+# secrets beyond GITHUB_TOKEN are used and the builds are not code-signed.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Build and keep artifacts only; create no release
+        type: boolean
+        default: true
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  prepare:
+    name: Check version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      publish: ${{ steps.version.outputs.publish }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # package.json, tauri.conf.json and Cargo.toml must carry the same version,
+      # and a tag must be exactly v<that version>.
+      - name: Check the tag against the app version
+        id: version
+        env:
+          EVENT: ${{ github.event_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          pkg=$(node -p "require('./package.json').version")
+          conf=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          cargo=$(sed -n 's/^version = "\(.*\)"$/\1/p' src-tauri/Cargo.toml | head -n 1)
+          echo "package.json:              $pkg"
+          echo "src-tauri/tauri.conf.json: $conf"
+          echo "src-tauri/Cargo.toml:      $cargo"
+          if [[ "$pkg" != "$conf" || "$pkg" != "$cargo" ]]; then
+            echo "::error::The app version differs between package.json ($pkg), src-tauri/tauri.conf.json ($conf) and src-tauri/Cargo.toml ($cargo). Set all three to the same version."
+            exit 1
+          fi
+          if [[ "$REF_TYPE" == "tag" && "$REF_NAME" != "v$pkg" ]]; then
+            echo "::error::Tag $REF_NAME does not match the app version $pkg. Tag the release v$pkg, or bump the version in all three files first."
+            exit 1
+          fi
+          publish=false
+          if [[ "$EVENT" == "push" ]]; then
+            publish=true
+          elif [[ "$DRY_RUN" == "false" ]]; then
+            if [[ "$REF_TYPE" != "tag" ]]; then
+              echo "::error::dry_run=false needs a v$pkg tag as the ref; a branch run can only be a dry run."
+              exit 1
+            fi
+            publish=true
+          fi
+          echo "version=$pkg" >> "$GITHUB_OUTPUT"
+          echo "publish=$publish" >> "$GITHUB_OUTPUT"
+          echo "Version $pkg, draft release: $publish"
+
+  windows:
+    name: Windows (NSIS installer + portable zip)
+    needs: prepare
+    runs-on: windows-latest
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      # postinstall runs scripts/secure-foliate.mjs, and `npm run build` (the
+      # bundler's beforeBuildCommand) runs it again before vite.
+      - name: Install dependencies
+        run: npm ci
+
+      # tauri.windows.conf.json narrows bundling to NSIS and adds the installer
+      # hooks that keep existing file-type defaults. The MSVC build links the
+      # WebView2 loader statically, so the exe also runs without an installer.
+      - name: Bundle the Windows installer (NSIS)
+        run: npx tauri build --bundles nsis -- --locked
+
+      - name: Name the release files
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $out = New-Item -ItemType Directory -Force -Path release-assets
+          $setup = @(Get-ChildItem -Path src-tauri/target/release/bundle/nsis -Filter '*-setup.exe')
+          if ($setup.Count -ne 1) { throw "Expected one NSIS installer, found $($setup.Count)." }
+          Copy-Item -LiteralPath $setup[0].FullName -Destination (Join-Path $out "Float-Reader-$env:VERSION-windows-x64-setup.exe")
+
+          $stage = New-Item -ItemType Directory -Force -Path 'portable/Float Reader'
+          Copy-Item -LiteralPath src-tauri/target/release/float-reader.exe -Destination (Join-Path $stage 'Float Reader.exe')
+          $loader = 'src-tauri/target/release/WebView2Loader.dll'
+          if (Test-Path -LiteralPath $loader) { Copy-Item -LiteralPath $loader -Destination $stage }
+          Copy-Item -LiteralPath LICENSE -Destination $stage -ErrorAction SilentlyContinue
+          Compress-Archive -Path $stage -DestinationPath (Join-Path $out "Float-Reader-$env:VERSION-windows-x64-portable.zip")
+          Get-ChildItem $out | Format-Table Name, Length
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-windows
+          path: release-assets/*
+          if-no-files-found: error
+          retention-days: 14
+
+  macos:
+    name: macOS (Apple silicon .dmg)
+    needs: prepare
+    # macos-latest is Apple silicon, so this is an arm64 build.
+    runs-on: macos-latest
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies
+        run: npm ci
+
+      # tauri.macos.conf.json selects the .app and .dmg. There is no Developer ID,
+      # so the bundle is ad-hoc signed (signingIdentity "-") before it goes into
+      # the .dmg; an unsealed bundle would be reported as damaged once downloaded.
+      # This is the build-macos.sh bundle step with the signing done in place.
+      - name: Bundle the macOS app and disk image
+        run: |
+          npx tauri build --bundles app,dmg \
+            --config '{"bundle":{"macOS":{"signingIdentity":"-"}}}' \
+            -- --locked
+
+      - name: Name and check the disk image
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          dmgs=(src-tauri/target/release/bundle/dmg/*.dmg)
+          if (( ${#dmgs[@]} != 1 )); then
+            echo "::error::Expected one .dmg, found ${#dmgs[@]}."
+            exit 1
+          fi
+          mkdir -p release-assets
+          out="release-assets/Float-Reader-$VERSION-macos-arm64.dmg"
+          cp "${dmgs[0]}" "$out"
+
+          mnt=$(mktemp -d)
+          hdiutil attach -nobrowse -readonly -mountpoint "$mnt" "$out"
+          trap 'hdiutil detach "$mnt" -quiet || true' EXIT
+          app="$mnt/Float Reader.app"
+          codesign --verify --deep --strict --verbose=2 "$app"
+          exe=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app/Contents/Info.plist")
+          lipo -archs "$app/Contents/MacOS/$exe" | grep -qw arm64
+          ls -l release-assets
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-macos
+          path: release-assets/*
+          if-no-files-found: error
+          retention-days: 14
+
+  package:
+    name: Checksums and notes
+    needs: [prepare, windows, macos]
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: release-assets
+          merge-multiple: true
+
+      - name: Write SHA256SUMS.txt
+        working-directory: release-assets
+        run: |
+          set -euo pipefail
+          for f in "Float-Reader-$VERSION-windows-x64-setup.exe" \
+                   "Float-Reader-$VERSION-windows-x64-portable.zip" \
+                   "Float-Reader-$VERSION-macos-arm64.dmg"; do
+            [[ -f "$f" ]] || { echo "::error::Missing release file $f"; exit 1; }
+          done
+          sha256sum Float-Reader-* > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Render the release notes
+        env:
+          TAG: v${{ needs.prepare.outputs.version }}
+          COMMIT: ${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          envsubst '${VERSION} ${TAG} ${COMMIT} ${RUN_URL}' < .github/release-notes.md > RELEASE_NOTES.md
+          cat RELEASE_NOTES.md
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Float-Reader-${{ needs.prepare.outputs.version }}-release
+          path: |
+            release-assets/*
+            RELEASE_NOTES.md
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    name: Draft GitHub Release
+    needs: [prepare, package]
+    if: needs.prepare.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+      TAG: v${{ needs.prepare.outputs.version }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: Float-Reader-${{ needs.prepare.outputs.version }}-release
+          path: dist
+
+      # Re-running the workflow for the same tag refreshes the files of an
+      # existing draft; a published release is never touched.
+      - name: Create or update the draft release
+        run: |
+          set -euo pipefail
+          files=(dist/release-assets/*)
+          if state=$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null); then
+            if [[ "$state" != "true" ]]; then
+              echo "::error::Release $TAG is already published; it is left unchanged."
+              exit 1
+            fi
+            gh release edit "$TAG" --notes-file dist/RELEASE_NOTES.md
+            gh release upload "$TAG" "${files[@]}" --clobber
+          else
+            gh release create "$TAG" "${files[@]}" \
+              --draft --verify-tag \
+              --title "Float Reader $VERSION" \
+              --notes-file dist/RELEASE_NOTES.md
+          fi
+          echo "Draft release: $(gh release view "$TAG" --json url --jq .url)"
