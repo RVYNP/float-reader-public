@@ -121,6 +121,53 @@ test('PDF loading does not change scroll geometry or repeatedly refit an idle pa
   }
 });
 
+test('library resizes by drag, keyboard and double-click, docks right, persists, and refits the PDF once', async ({ page }) => {
+  await page.setViewportSize({ width: 1080, height: 680 });
+  await page.goto('/');
+  await page.locator('#file-input').setInputFiles({ name: 'library-resize.pdf', mimeType: 'application/pdf', buffer: pdfFixture() });
+  await expect(page.locator('#position')).toContainText('Page 1 of 3');
+  await expect(page.locator('.pdf-render-status')).toHaveCount(0);
+  const handle = page.getByRole('separator', { name: 'Resize library' });
+  const panel = page.locator('.library-panel'), host = page.locator('.pdf-reader');
+  await expect(handle).toHaveAttribute('aria-valuenow', '270');
+  const box = (await handle.boundingBox())!, y = box.y + box.height / 2;
+  const hostWidth = await host.evaluate(el => el.clientWidth);
+  await page.mouse.move(box.x + 5, y); await page.mouse.down();
+  await page.mouse.move(box.x + 45, y, { steps: 6 });
+  // The panels follow the pointer live; the reader host keeps its width until release.
+  await expect(handle).toHaveAttribute('aria-valuenow', '310');
+  expect(await host.evaluate(el => el.clientWidth)).toBe(hostWidth);
+  await page.mouse.move(box.x + 75, y, { steps: 6 }); await page.mouse.up();
+  await expect(handle).toHaveAttribute('aria-valuenow', '340');
+  expect(Math.round((await panel.boundingBox())!.width)).toBe(340);
+  await expect.poll(() => host.evaluate(el => el.clientWidth)).toBe(hostWidth - 70);
+  await expect(page.locator('.pdf-render-status')).toHaveCount(0);
+  await page.waitForTimeout(450); // Several resize-debounce periods must remain idle.
+  await expect(page.locator('.pdf-page')).toHaveCount(1);
+
+  await handle.focus();
+  for (const [key, width] of [['ArrowRight', 356], ['Shift+ArrowLeft', 292], ['End', 520], ['Home', 240], ['Enter', 270], ['End', 520]] as const) {
+    await page.keyboard.press(key); await expect(handle).toHaveAttribute('aria-valuenow', String(width));
+  }
+  await handle.dblclick(); await expect(handle).toHaveAttribute('aria-valuenow', '270');
+  await page.keyboard.press('Shift+ArrowRight'); await expect(handle).toHaveAttribute('aria-valuenow', '334');
+
+  await page.getByRole('button', { name: 'Move library to the right' }).click();
+  await expect(page.getByRole('button', { name: 'Move library to the left' })).toBeVisible();
+  const docked = async () => (await panel.boundingBox())!.x > (await page.locator('#workspace').boundingBox())!.x;
+  expect(await docked()).toBe(true);
+  await page.reload();
+  await expect(handle).toHaveAttribute('aria-valuenow', '334');
+  expect(await docked()).toBe(true);
+  // Arrows move the separator visually, so Left widens a right-docked library.
+  await handle.focus(); await page.keyboard.press('ArrowLeft'); await expect(handle).toHaveAttribute('aria-valuenow', '350');
+  // A narrower window re-clamps (55% of 800 px) without forgetting the preferred width.
+  await page.keyboard.press('End'); await expect(handle).toHaveAttribute('aria-valuenow', '520');
+  await page.setViewportSize({ width: 800, height: 680 });
+  await expect(handle).toHaveAttribute('aria-valuenow', '440'); await expect(handle).toHaveAttribute('aria-valuemax', '440');
+  await page.setViewportSize({ width: 1080, height: 680 }); await expect(handle).toHaveAttribute('aria-valuenow', '520');
+});
+
 test('PDF page-bitmap cache never reuses pixels across rotation', async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
   await page.goto('/');

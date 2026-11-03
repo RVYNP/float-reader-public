@@ -87,6 +87,7 @@ panel is wide enough.
 | Back after a jump | Alt+Left |
 | Open a file | Ctrl+O |
 | Document library | Ctrl+B |
+| Resize library (divider focused) | Left / Right (Shift: larger steps), Home / End, Enter resets |
 | Pin / size lock | Ctrl+Shift+T / Ctrl+Shift+L |
 | Fit page / fit width | Ctrl+0 / Ctrl+2 |
 | Two-page spread | Ctrl+3 |
@@ -108,6 +109,14 @@ Use the sidebar button at the left of the toolbar, or **Ctrl+B**, to open the li
 720 pixels and above it sits beside the reading panel; in compact windows it overlays the panel and
 closes after you open a document. Escape dismisses it. Wide and compact visibility preferences are
 remembered separately.
+
+In the side-by-side layout, drag the divider between the library and the reading panel to resize the
+library (240–520 pixels, never more than 55% of the window, and always leaving the reading panel at
+least 320 pixels). Double-click the divider to reset it to 270 pixels. The divider is also
+focusable: Left and Right resize by 16 pixels (Shift: 64), Home and End jump to the narrowest and
+widest sizes, and Enter resets. The page refits once when you release the divider. The header button
+beside **×** moves the library to the other side of the reading panel; the compact overlay follows
+the same side. Width and side are remembered, and the width is re-fitted when the window shrinks.
 
 - **Add files** selects several documents or images at once without opening them. Select a
   collection first to add new entries directly to it.
