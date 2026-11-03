@@ -3,6 +3,7 @@ import workerURL from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import 'pdfjs-dist/web/pdf_viewer.css';
 import './pdf.css';
 import type { Locator, OutlineItem, Position, ReaderAdapter, ReaderContext, ReaderOptions, ReaderSource } from '../types';
+import { MIN_SPREAD_WIDTH, pagesLabel, spreadPages } from '../spread';
 
 GlobalWorkerOptions.workerSrc = workerURL;
 /** Bound on decoded page bitmaps kept for instant page turns (bytes of canvas backing store). */
@@ -11,22 +12,27 @@ const clamp = (value: number, min = 0, max = 1) => Math.max(min, Math.min(max, N
 
 export class PdfAdapter implements ReaderAdapter {
   readonly mode = 'fixed' as const;
+  readonly spreads = true;
   private doc?: PDFDocumentProxy;
   private loading?: ReturnType<typeof getDocument>;
   private host!: HTMLElement;
   private context!: ReaderContext;
   private options!: ReaderOptions;
-  private page = 1;
+  /** Committed pages in reading order: one page, or a two-page spread. */
+  private pages = [1];
+  /** First page of the most recently requested page or spread. */
   private requested = 1;
+  /** Two-page state of the committed view; undefined when single pages were asked for. */
+  private shownSpread: Position['spread'];
   private labels: string[] | null = null;
   private items: OutlineItem[] = [];
   private destinations = new Map<string, unknown>();
   private history: Locator[] = [];
   private generation = 0;
   private disposed = false;
-  private task?: RenderTask;
-  private layer?: TextLayer;
-  private currentPage?: PDFPageProxy;
+  private tasks: RenderTask[] = [];
+  private layers: TextLayer[] = [];
+  private currentPages: PDFPageProxy[] = [];
   private surface?: HTMLElement;
   private status?: HTMLElement;
   private observer?: ResizeObserver;
@@ -79,103 +85,147 @@ export class PdfAdapter implements ReaderAdapter {
     this.observer.observe(host);
   }
 
-  private async render(pageNumber: number, y = 0, x = 0, atEnd = false) {
+  /** Two-page state for the current options and panel width; offsetWidth ignores scrollbars, so a refit cannot flip it. */
+  private spreadState(): Position['spread'] {
+    return this.options.spread ? this.host.offsetWidth >= MIN_SPREAD_WIDTH ? 'active' : 'waiting' : undefined;
+  }
+  private pagesAt(page: number, spread: boolean) {
+    const count = this.doc?.numPages ?? 1;
+    return spread ? spreadPages(page, count, this.options.cover !== false) : [clamp(Math.trunc(page), 1, count)];
+  }
+
+  /** `anchored` means `x` is a fraction of page `pageNumber` itself (a link target) rather than of the whole view. */
+  private async render(pageNumber: number, y = 0, x = 0, atEnd = false, anchored = false) {
     const doc = this.doc;
     if (!doc || this.disposed) return;
     const generation = ++this.generation;
-    this.requested = clamp(Math.trunc(pageNumber), 1, doc.numPages);
-    const target = this.requested;
-    this.task?.cancel(); this.layer?.cancel();
+    const state = this.spreadState(), spread = state === 'active';
+    const numbers = this.pagesAt(pageNumber, spread);
+    this.requested = numbers[0];
+    for (const task of this.tasks) task.cancel();
+    for (const layer of this.layers) layer.cancel();
+    this.tasks = []; this.layers = [];
     this.status?.remove();
     const status = this.status = document.createElement('div');
-    status.className = 'pdf-render-status'; status.setAttribute('role', 'status'); status.textContent = `Loading page ${target}…`;
+    const which = numbers.length > 1 ? `pages ${numbers[0]}–${numbers[1]}` : `page ${numbers[0]}`;
+    status.className = 'pdf-render-status'; status.setAttribute('role', 'status'); status.textContent = `Loading ${which}…`;
     // Keep loading/retry UI out of page flow: a temporary scrollbar retriggers resize.
     status.style.top = `${this.host.scrollTop + 8}px`;
     status.style.left = `${this.host.scrollLeft + 8}px`;
     this.host.append(status); this.host.setAttribute('aria-busy', 'true');
-    let page: PDFPageProxy | undefined;
     try {
-      page = await doc.getPage(target);
+      const pages = await Promise.all(numbers.map(number => doc.getPage(number)));
       if (generation !== this.generation || this.disposed) return;
-      const { viewport, scale, dpr, pixelsWidth, pixelsHeight, key } = this.layout(page, target);
-      const surface = document.createElement('div'); surface.className = 'pdf-page';
-      surface.style.width = `${viewport.width}px`; surface.style.height = `${viewport.height}px`;
-      surface.style.setProperty('--scale-factor', String(scale));
-      surface.style.setProperty('--total-scale-factor', String(scale));
-      // A cached bitmap for a neighbouring page paints in the same frame as the turn:
-      // no decode, no rasterization, just a blit into the new canvas.
-      const canvas = document.createElement('canvas'); canvas.setAttribute('aria-hidden', 'true');
-      const cached = this.pageCache.get(key);
-      canvas.width = pixelsWidth; canvas.height = pixelsHeight;
-      canvas.style.width = `${viewport.width}px`; canvas.style.height = `${viewport.height}px`;
-      if (cached) canvas.getContext('2d')?.drawImage(cached, 0, 0);
-      surface.append(canvas);
-      const task = cached ? undefined
-        : this.task = page.render({ canvas, viewport, transform: dpr === 1 ? undefined : [dpr, 0, 0, dpr, 0, 0] });
-      void task?.promise.catch(() => {}); // Cancellation can occur while text extraction is still pending.
-      // Show the page as soon as it has pixels. The text layer and links are layered on
+      const shown = this.layout(pages, numbers, spread).map(({ viewport, scale, dpr, pixelsWidth, pixelsHeight, key }, index) => {
+        const surface = document.createElement('div'); surface.className = 'pdf-page';
+        surface.style.width = `${viewport.width}px`; surface.style.height = `${viewport.height}px`;
+        surface.style.setProperty('--scale-factor', String(scale));
+        surface.style.setProperty('--total-scale-factor', String(scale));
+        // A cached bitmap for a neighbouring page paints in the same frame as the turn:
+        // no decode, no rasterization, just a blit into the new canvas.
+        const canvas = document.createElement('canvas'); canvas.setAttribute('aria-hidden', 'true');
+        const cached = this.pageCache.get(key);
+        canvas.width = pixelsWidth; canvas.height = pixelsHeight;
+        canvas.style.width = `${viewport.width}px`; canvas.style.height = `${viewport.height}px`;
+        if (cached) canvas.getContext('2d')?.drawImage(cached, 0, 0);
+        surface.append(canvas);
+        const task = cached ? undefined
+          : pages[index].render({ canvas, viewport, transform: dpr === 1 ? undefined : [dpr, 0, 0, dpr, 0, 0] });
+        if (task) { this.tasks.push(task); void task.promise.catch(() => {}); } // Cancellation can occur while text extraction is still pending.
+        return { page: pages[index], surface, canvas, viewport, key, task };
+      });
+      const pagesWidth = shown.reduce((sum, { viewport }) => sum + viewport.width, 0);
+      const size = { width: pagesWidth, height: shown[0].viewport.height };
+      let view = shown[0].surface;
+      if (spread) {
+        // Pages sit edge to edge. A page without a partner keeps its side of the open book:
+        // the cover on the right, a final even page on the left.
+        view = document.createElement('div'); view.className = 'pdf-spread';
+        const side = shown.length > 1 ? 'both' : numbers[0] === 1 && this.options.cover !== false ? 'right' : 'left';
+        view.dataset.side = side;
+        if (side !== 'both') size.width *= 2;
+        view.style.width = `${size.width}px`; view.style.height = `${size.height}px`;
+        view.append(...shown.map(({ surface }) => surface));
+        if (anchored) {
+          const index = Math.max(0, numbers.indexOf(Math.trunc(pageNumber)));
+          const offset = side === 'right' ? pagesWidth : shown.slice(0, index).reduce((sum, { viewport }) => sum + viewport.width, 0);
+          x = (offset + clamp(x) * shown[index].viewport.width) / size.width;
+        }
+      }
+      // Show the pages as soon as they have pixels. The text layer and links are layered on
       // afterwards: waiting for them would delay first content by a full frame budget.
-      this.commit(surface, target, page, viewport, y, x, atEnd);
-      const text = await page.getTextContent();
-      if (generation !== this.generation || this.disposed) { task?.cancel(); return; }
-      if (task) await task.promise;
-      if (generation !== this.generation || this.disposed) return;
-      // Only a completed raster may be reused: a cancelled task leaves a partially painted canvas.
-      if (task) this.cachePage(key, canvas);
-      const textContainer = document.createElement('div'); textContainer.className = 'textLayer';
-      surface.append(textContainer);
-      const layer = this.layer = new TextLayer({ textContentSource: text, container: textContainer, viewport });
-      await layer.render();
-      if (generation !== this.generation || this.disposed) return;
-      for (const annotation of await page.getAnnotations()) {
-        if (annotation.subtype !== 'Link' || (!annotation.dest && !annotation.url)) continue;
-        const [x1, y1] = viewport.convertToViewportPoint(annotation.rect[0], annotation.rect[1]);
-        const [x2, y2] = viewport.convertToViewportPoint(annotation.rect[2], annotation.rect[3]);
-        const link = document.createElement('a'); link.className = 'pdf-link'; link.href = '#';
-        link.setAttribute('aria-label', annotation.url ? `Open ${annotation.url}` : 'Go to linked passage');
-        Object.assign(link.style, { left: `${Math.min(x1, x2)}px`, top: `${Math.min(y1, y2)}px`, width: `${Math.abs(x2 - x1)}px`, height: `${Math.abs(y2 - y1)}px` });
-        link.addEventListener('click', event => { event.preventDefault();
-          if (annotation.dest) { this.pushHistory(); void this.followDestination(annotation.dest).catch(this.context.onError); }
-          else if (/^https?:\/\//i.test(annotation.url)) void this.context.openExternal(annotation.url).catch(this.context.onError);
-        }); surface.append(link);
+      this.commit(view, numbers, pages, size, y, x, atEnd, state);
+      const texts = await Promise.all(pages.map(page => page.getTextContent()));
+      if (generation !== this.generation || this.disposed) { for (const { task } of shown) task?.cancel(); return; }
+      for (const [index, { page, surface, canvas, viewport, key, task }] of shown.entries()) {
+        if (task) await task.promise;
+        if (generation !== this.generation || this.disposed) return;
+        // Only a completed raster may be reused: a cancelled task leaves a partially painted canvas.
+        if (task) this.cachePage(key, canvas);
+        const textContainer = document.createElement('div'); textContainer.className = 'textLayer';
+        surface.append(textContainer);
+        const layer = new TextLayer({ textContentSource: texts[index], container: textContainer, viewport });
+        this.layers.push(layer);
+        await layer.render();
+        if (generation !== this.generation || this.disposed) return;
+        for (const annotation of await page.getAnnotations()) {
+          if (annotation.subtype !== 'Link' || (!annotation.dest && !annotation.url)) continue;
+          const [x1, y1] = viewport.convertToViewportPoint(annotation.rect[0], annotation.rect[1]);
+          const [x2, y2] = viewport.convertToViewportPoint(annotation.rect[2], annotation.rect[3]);
+          const link = document.createElement('a'); link.className = 'pdf-link'; link.href = '#';
+          link.setAttribute('aria-label', annotation.url ? `Open ${annotation.url}` : 'Go to linked passage');
+          Object.assign(link.style, { left: `${Math.min(x1, x2)}px`, top: `${Math.min(y1, y2)}px`, width: `${Math.abs(x2 - x1)}px`, height: `${Math.abs(y2 - y1)}px` });
+          link.addEventListener('click', event => { event.preventDefault();
+            if (annotation.dest) { this.pushHistory(); void this.followDestination(annotation.dest).catch(this.context.onError); }
+            else if (/^https?:\/\//i.test(annotation.url)) void this.context.openExternal(annotation.url).catch(this.context.onError);
+          }); surface.append(link);
+        }
+        if (generation !== this.generation || this.disposed) return;
+        if (!texts[index].items.length) {
+          const note = document.createElement('p'); note.className = 'pdf-scan-note'; note.textContent = 'Image-only page. Text selection is unavailable.'; surface.append(note);
+        }
       }
-      if (generation !== this.generation || this.disposed) return;
-      if (!text.items.length) {
-        const note = document.createElement('p'); note.className = 'pdf-scan-note'; note.textContent = 'Image-only page. Text selection is unavailable.'; surface.append(note);
-      }
-      this.prefetchNeighbours(target);
+      this.prefetchNeighbours(numbers, spread);
     } catch (error) {
       if (generation !== this.generation || this.disposed || (error as Error).name === 'RenderingCancelledException') return;
-      this.requested = this.page; this.host.removeAttribute('aria-busy');
-      status.textContent = `Page ${target} could not be rendered. `;
-      const retry = document.createElement('button'); retry.textContent = 'Retry'; retry.onclick = () => { void this.render(target, y, x).catch(this.context.onError); }; status.append(retry);
+      this.requested = this.pages[0]; this.host.removeAttribute('aria-busy');
+      status.textContent = `${which[0].toUpperCase()}${which.slice(1)} could not be rendered. `;
+      const retry = document.createElement('button'); retry.textContent = 'Retry'; retry.onclick = () => { void this.render(pageNumber, y, x, atEnd, anchored).catch(this.context.onError); }; status.append(retry);
       throw error;
     }
   }
-  /** Geometry and cache identity for one page at the current options and host size. */
-  private layout(page: PDFPageProxy, number: number) {
-    const rotation = ((page.rotate + this.options.rotation) % 360 + 360) % 360;
-    const base = page.getViewport({ scale: 1, rotation });
+  /**
+   * Geometry and cache identity for the pages shown together at the current options and host size.
+   * Pages of a spread share one height, so mixed sizes line up; fit page fits the whole spread and
+   * fit width its width. A page alone in two-page view keeps the size of half a spread.
+   */
+  private layout(pages: PDFPageProxy[], numbers: number[], spread: boolean) {
+    const rotation = (page: PDFPageProxy) => ((page.rotate + this.options.rotation) % 360 + 360) % 360;
+    const bases = pages.map(page => page.getViewport({ scale: 1, rotation: rotation(page) }));
     const width = Math.max(100, this.host.clientWidth - 32), height = Math.max(100, this.host.clientHeight - 32);
-    const fit = this.options.fit === 'width' ? width / base.width : Math.min(width / base.width, height / base.height);
-    const scale = fit * clamp(this.options.zoom, .25, 5);
-    const viewport = page.getViewport({ scale, rotation });
-    // Cap the backing store by device pixels actually displayed, not by a flat 2x.
-    const dpr = Math.min(devicePixelRatio || 1, 2, Math.sqrt(16_000_000 / (viewport.width * viewport.height)));
-    const pixelsWidth = Math.ceil(viewport.width * dpr), pixelsHeight = Math.ceil(viewport.height * dpr);
-    // Rotation is part of the identity: 0° and 180° share pixel dimensions but not pixels.
-    return { viewport, scale, dpr, pixelsWidth, pixelsHeight, key: `${number}:${rotation}:${pixelsWidth}x${pixelsHeight}` };
+    const aspect = bases.reduce((sum, base) => sum + base.width / base.height, 0) * (spread && pages.length === 1 ? 2 : 1);
+    const fitted = this.options.fit === 'width' ? width / aspect : Math.min(height, width / aspect);
+    const common = fitted * clamp(this.options.zoom, .25, 5);
+    return pages.map((page, index) => {
+      const scale = common / bases[index].height;
+      const viewport = page.getViewport({ scale, rotation: rotation(page) });
+      // Cap the backing store by device pixels actually displayed, not by a flat 2x.
+      const dpr = Math.min(devicePixelRatio || 1, 2, Math.sqrt(16_000_000 / (viewport.width * viewport.height)));
+      const pixelsWidth = Math.ceil(viewport.width * dpr), pixelsHeight = Math.ceil(viewport.height * dpr);
+      // Rotation is part of the identity: 0° and 180° share pixel dimensions but not pixels.
+      return { viewport, scale, dpr, pixelsWidth, pixelsHeight, key: `${numbers[index]}:${rotation(page)}:${pixelsWidth}x${pixelsHeight}` };
+    });
   }
 
-  /** Puts a rendered page on screen and records the position it represents. */
-  private commit(surface: HTMLElement, target: number, page: PDFPageProxy, viewport: { width: number; height: number }, y: number, x: number, atEnd: boolean) {
-    const previous = this.currentPage;
-    this.currentPage = page; this.page = target; this.surface = surface;
-    this.host.replaceChildren(surface); this.host.removeAttribute('aria-busy');
-    this.host.scrollTop = atEnd ? this.host.scrollHeight : clamp(y) * viewport.height;
-    this.host.scrollLeft = clamp(x) * viewport.width;
+  /** Puts rendered pages on screen and records the position they represent. */
+  private commit(view: HTMLElement, numbers: number[], pages: PDFPageProxy[], size: { width: number; height: number }, y: number, x: number, atEnd: boolean, state: Position['spread']) {
+    const previous = this.currentPages;
+    this.currentPages = pages; this.pages = numbers; this.surface = view; this.shownSpread = state;
+    this.host.replaceChildren(view); this.host.removeAttribute('aria-busy');
+    this.host.scrollTop = atEnd ? this.host.scrollHeight : clamp(y) * size.height;
+    this.host.scrollLeft = clamp(x) * size.width;
     this.explicitEnd = atEnd;
-    if (previous && previous !== page) previous.cleanup();
+    for (const page of previous) if (!pages.includes(page)) page.cleanup();
     this.report();
   }
 
@@ -198,8 +248,8 @@ export class PdfAdapter implements ReaderAdapter {
     this.pageCache.set(key, canvas);
   }
 
-  /** Warms the immediate neighbours at idle so a held-down page key does not rasterize on demand. */
-  private prefetchNeighbours(current: number) {
+  /** Warms the neighbouring pages or spreads at idle so a held-down page key does not rasterize on demand. */
+  private prefetchNeighbours(shown: number[], spread: boolean) {
     const doc = this.doc;
     if (!doc || this.disposed || this.prefetching) return;
     this.prefetching = true;
@@ -208,17 +258,20 @@ export class PdfAdapter implements ReaderAdapter {
     this.prefetchAbort = controller;
     void (async () => {
       try {
-        for (const number of [current + 1, current - 1]) {
-          if (number < 1 || number > doc.numPages || controller.signal.aborted || this.disposed) continue;
-          const page = await doc.getPage(number);
+        for (const start of [shown.at(-1)! + 1, shown[0] - 1]) {
+          if (start < 1 || start > doc.numPages || controller.signal.aborted || this.disposed) continue;
+          // A spread's geometry depends on both pages, so the whole neighbouring spread is laid out together.
+          const numbers = this.pagesAt(start, spread);
+          const pages = await Promise.all(numbers.map(number => doc.getPage(number)));
           if (controller.signal.aborted || this.disposed) return;
-          const { viewport, dpr, pixelsWidth, pixelsHeight, key } = this.layout(page, number);
-          if (this.pageCache.has(key)) continue;
-          const canvas = document.createElement('canvas');
-          canvas.width = pixelsWidth; canvas.height = pixelsHeight;
-          await page.render({ canvas, viewport, transform: dpr === 1 ? undefined : [dpr, 0, 0, dpr, 0, 0] }).promise;
-          if (controller.signal.aborted || this.disposed) return;
-          this.cachePage(key, canvas);
+          for (const [index, { viewport, dpr, pixelsWidth, pixelsHeight, key }] of this.layout(pages, numbers, spread).entries()) {
+            if (this.pageCache.has(key)) continue;
+            const canvas = document.createElement('canvas');
+            canvas.width = pixelsWidth; canvas.height = pixelsHeight;
+            await pages[index].render({ canvas, viewport, transform: dpr === 1 ? undefined : [dpr, 0, 0, dpr, 0, 0] }).promise;
+            if (controller.signal.aborted || this.disposed) return;
+            this.cachePage(key, canvas);
+          }
         }
       } catch { /* Prefetch is an optimization; a failure must never surface to the reader. */ }
       finally { if (this.prefetchAbort === controller) this.prefetching = false; }
@@ -238,8 +291,10 @@ export class PdfAdapter implements ReaderAdapter {
         this.host.scrollTop = clamp(this.host.scrollTop + (forward ? 1 : -1) * this.host.clientHeight * .9, 0, max); this.report(); return;
       }
     }
-    const target = clamp(this.requested + (forward ? 1 : -1), 1, this.doc.numPages);
-    if (target !== this.requested) await this.render(target, forward ? 0 : action === 'screen-previous' ? 1 : 0);
+    // Turns move by the requested page or spread, so a held key never waits for the commit.
+    const requested = this.pagesAt(this.requested, this.spreadState() === 'active');
+    const target = forward ? requested.at(-1)! + 1 : requested[0] - 1;
+    if (target >= 1 && target <= this.doc.numPages) await this.render(target, forward ? 0 : action === 'screen-previous' ? 1 : 0);
   }
   async goTo(target: string) {
     if (this.destinations.has(target)) { this.pushHistory(); await this.followDestination(this.destinations.get(target)); return; }
@@ -258,25 +313,30 @@ export class PdfAdapter implements ReaderAdapter {
     if (dest[1]?.name === 'XYZ' && typeof dest[3] === 'number') {
       const point = view.convertToViewportPoint(typeof dest[2] === 'number' ? dest[2] : 0, dest[3]); x = point[0] / view.width; y = point[1] / view.height;
     }
-    await this.render(index + 1, y, x);
+    await this.render(index + 1, y, x, false, true);
   }
   getPosition(): Position {
     const y = clamp(this.host?.scrollTop / (this.surface?.offsetHeight || 1));
     const x = clamp(this.host?.scrollLeft / (this.surface?.offsetWidth || 1));
-    const printed = this.labels?.[this.page - 1];
-    return { label: `Page ${this.page} of ${this.doc?.numPages ?? 1}${printed && printed !== String(this.page) ? ` · ${printed}` : ''}`,
-      fraction: this.explicitEnd ? 1 : ((this.page - 1) + y) / (this.doc?.numPages ?? 1),
-      scrub: { current: this.page, total: this.doc?.numPages ?? 1, unit: 'page' },
-      locator: { kind: 'pdf', page: this.page, x, y, fit: this.options?.fit, zoom: this.options?.zoom, rotation: this.options?.rotation, end: this.explicitEnd } };
+    const total = this.doc?.numPages ?? 1, first = this.pages[0];
+    const printed = this.pages.map(number => this.labels?.[number - 1] || String(number));
+    const custom = printed.some((label, index) => label !== String(this.pages[index]));
+    const spread = this.shownSpread === 'active';
+    // The saved page is the first visible one, so switching between single and two-page view keeps the place.
+    return { label: `${pagesLabel(this.pages, total)}${custom ? ` · ${printed.join('–')}` : ''}`,
+      fraction: this.explicitEnd ? 1 : ((first - 1) + y * this.pages.length) / total,
+      scrub: { current: first, total, unit: 'page', ...(spread ? { cover: this.options.cover !== false } : {}) },
+      ...(this.shownSpread ? { spread: this.shownSpread } : {}),
+      locator: { kind: 'pdf', page: first, x, y, fit: this.options?.fit, zoom: this.options?.zoom, rotation: this.options?.rotation, end: this.explicitEnd } };
   }
   async restore(locator: Locator) { if (locator.kind === 'pdf') await this.render(Number(locator.page) || 1, Number(locator.y) || 0, Number(locator.x) || 0, locator.end === true); }
   async setOptions(options: ReaderOptions) { const old = this.getPosition().locator; this.options = { ...options }; await this.restore(old); }
   outline() { return this.items; }
   scroller() { return this.host; }
   destroy() {
-    this.disposed = true; ++this.generation; this.task?.cancel(); this.layer?.cancel(); this.observer?.disconnect(); clearTimeout(this.resizeTimer);
+    this.disposed = true; ++this.generation; for (const task of this.tasks) task.cancel(); for (const layer of this.layers) layer.cancel(); this.observer?.disconnect(); clearTimeout(this.resizeTimer);
     this.host?.removeEventListener('scroll', this.onScroll); this.host?.classList.remove('pdf-reader');
     this.prefetchAbort?.abort(); this.pageCache.clear();
-    void this.loading?.destroy(); this.surface = undefined; this.doc = undefined; this.currentPage = undefined;
+    void this.loading?.destroy(); this.surface = undefined; this.doc = undefined; this.currentPages = [];
   }
 }
