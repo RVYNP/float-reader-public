@@ -7,6 +7,7 @@
 #
 # Running the workflow by hand (workflow_dispatch) is a dry run by default: it
 # builds everything and keeps it as workflow artifacts, and creates no release.
+# A pull request that changes the release files gets the same dry run.
 #
 # The build steps are the ones ci.yml already proves on every push. Tests are
 # not repeated here; tag a commit whose CI run is green. No caches are restored,
@@ -17,6 +18,10 @@ name: Release
 on:
   push:
     tags: ['v*']
+  pull_request:
+    paths:
+      - .github/workflows/release.yml
+      - .github/release-notes.md
   workflow_dispatch:
     inputs:
       dry_run:
