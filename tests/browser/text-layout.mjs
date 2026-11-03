@@ -78,6 +78,26 @@ try {
   }
   assert.equal(resized.locator.line, 333, `Resizing must keep the source anchor (got line ${resized.locator?.line})`);
   assert.ok(Math.abs(resized.fraction - result.before.fraction) < .001, `Progress must use the source, not the scroll height (got ${resized.fraction} vs ${result.before.fraction})`);
+  // Deterministic form of the race above. Every restore writes scrollTop, which queues a
+  // scroll event; when the host changes size before that event is delivered, the scroll
+  // handler runs against the new layout ahead of the ResizeObserver. It must keep the
+  // anchor instead of re-capturing it from reflowed geometry (measured drift: 333 -> 665).
+  const raced = await page.evaluate(async () => {
+    const { adapter, host } = window.textReaderFixture;
+    const frames = async count => { for (let i = 0; i < count; i++) await new Promise(done => requestAnimationFrame(done)); };
+    const lines = [];
+    for (const right of ['45%', '', '30%', '']) {
+      await adapter.goTo('333'); await frames(3);
+      // Animation-frame callbacks run in FIFO order before ResizeObserver delivery, so the
+      // scroll handler's frame callback sees the resized layout before the observer does.
+      requestAnimationFrame(() => { host.style.right = right; });
+      host.dispatchEvent(new Event('scroll'));
+      await frames(6);
+      lines.push(adapter.getPosition().locator.line);
+    }
+    return lines;
+  });
+  assert.deepEqual(raced, [333, 333, 333, 333], `A scroll delivered after a resize must keep the source anchor (got ${raced.join(', ')})`);
   const restored = await page.evaluate(async () => {
     const { adapter, before, host, defaultOptions, source, context } = window.textReaderFixture;
     const { TextAdapter } = window.ReaderText;
@@ -113,5 +133,5 @@ try {
   } catch { /* fall through: report what was actually observed */ }
   compactLabel = await page.evaluate(() => window.textReaderFixture.adapter.getPosition().label);
   assert.equal(compactLabel, 'Heading 20', `Markdown anchor must survive compact resize (got ${JSON.stringify(compactLabel)})`);
-  console.log(JSON.stringify({ passed: ['TXT source-line jump', 'TXT typography anchor', 'TXT resize anchor', 'source-based progress', 'TXT reopen', 'Markdown outline jump', 'Markdown typography anchor', 'Markdown compact resize'], sourceLine: restored.locator.line }, null, 2));
+  console.log(JSON.stringify({ passed: ['TXT source-line jump', 'TXT typography anchor', 'TXT resize anchor', 'source-based progress', 'TXT scroll after resize', 'TXT reopen', 'Markdown outline jump', 'Markdown typography anchor', 'Markdown compact resize'], sourceLine: restored.locator.line }, null, 2));
 } finally { await browser.close(); }

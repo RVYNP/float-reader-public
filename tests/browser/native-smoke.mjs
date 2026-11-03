@@ -23,7 +23,7 @@
 // Exit codes: 0 = every check that applies on this platform passed (CDP may have
 //                 been skipped, which is stated in the output),
 //             1 = a real check failed, or the app could not be launched.
-import { chromium } from '@playwright/test';
+import { chromium, expect } from '@playwright/test';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import assert from 'node:assert/strict';
@@ -85,12 +85,12 @@ try {
   await page.locator('#filename').filter({ hasText: 'native-smoke.txt' }).waitFor();
   assert.equal(await page.locator('#notice').isVisible(), false, 'No startup or IPC errors');
   const initial = await page.evaluate(() => window.__TAURI_INTERNALS__.invoke('get_state'));
+  // The toggles round-trip through native IPC before the button reflects the new state, so
+  // wait for it rather than reading aria-pressed straight after the click.
   await page.locator('#pin').click();
-  await page.locator('#pin').waitFor();
-  assert.equal(await page.locator('#pin').getAttribute('aria-pressed'), String(!initial.window.pinned), 'Pin must toggle');
+  await expect(page.locator('#pin'), 'Pin must toggle').toHaveAttribute('aria-pressed', String(!initial.window.pinned));
   await page.locator('#lock').click();
-  await page.locator('#lock').waitFor();
-  assert.equal(await page.locator('#lock').getAttribute('aria-pressed'), String(!initial.window.locked), 'Lock must toggle');
+  await expect(page.locator('#lock'), 'Lock must toggle').toHaveAttribute('aria-pressed', String(!initial.window.locked));
   await page.keyboard.press('Control+g');
   await page.locator('#target').fill('50');
   await page.getByRole('button', { name: 'Go to location', exact: true }).click();

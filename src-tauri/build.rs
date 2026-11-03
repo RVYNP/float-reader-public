@@ -30,7 +30,7 @@ fn art(x: u32, y: u32) -> [u8; 4] {
     }
 }
 
-/// Bottom-up RGBA rows, as PNG's filter semantics expect.
+/// Top-down RGBA rows, the order PNG stores; the ICO writer flips them for DIBs.
 fn rgba_rows(size: u32) -> Vec<u8> {
     let mut rows = Vec::with_capacity((size * size * 4) as usize);
     for y in 0..size {
@@ -150,10 +150,10 @@ fn ico() -> Vec<u8> {
     bytes
 }
 
-/// An ICNS container. macOS members may carry PNG payloads; these are the
-/// retina 512/256 slots macOS bundles read, plus the legacy 128/32 forms.
+/// An ICNS container whose members carry PNG payloads, using Apple's
+/// PNG-capable types: ic09 = 512, ic08 = 256, ic07 = 128, icp4 = 16 pixels.
 fn icns() -> Vec<u8> {
-    let members: [(&[u8; 4], u32); 4] = [(b"ic10", 512), (b"ic09", 256), (b"ic07", 128), (b"icp4", 16)];
+    let members: [(&[u8; 4], u32); 4] = [(b"ic09", 512), (b"ic08", 256), (b"ic07", 128), (b"icp4", 16)];
     let mut body = Vec::new();
     for (kind, size) in members {
         let png = png(size);
