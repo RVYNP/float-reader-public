@@ -84,7 +84,9 @@ documents; they do not use production files.
 full IPC surface. On macOS, WKWebView exposes no CDP endpoint, so it verifies launch, liveness and
 clean quit, and skips the transport assertions with an explicit reason. Quit any running instance
 first: `tauri-plugin-single-instance` makes a second launch hand off and exit immediately, which
-cannot be distinguished from a failure.
+cannot be distinguished from a failure. Run it from a non-elevated shell: WebView2 Runtime 150+
+ignores the debugging switch for elevated processes, so the port never opens (CI, whose runners are
+elevated, sets the equivalent HKLM WebView2 policy instead).
 
 > **Windows build status.** After the macOS port, the Windows build was rebuilt and re-tested on
 > Windows 11 x64 with WebView2: `build-native.ps1` (GNU toolchain) produces the portable executable,
