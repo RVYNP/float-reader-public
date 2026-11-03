@@ -73,7 +73,7 @@ Tests create small synthetic fixtures from checked-in source. There is no propri
 
 ## Reproducible acceptance work
 
-Run the commands in [README](../README.md). Record observations without interpreting unmeasured values as passes. The next engineering work should address chunked/ranged byte transport and large-text rendering while building the corpus, followed by native window/accessibility acceptance. P1 features are deliberately not added to expand the scope.
+Run the commands in the [development guide](development.md). Record observations without interpreting unmeasured values as passes. The next engineering work should address chunked/ranged byte transport and large-text rendering while building the corpus, followed by native window/accessibility acceptance. P1 features are deliberately not added to expand the scope.
 
 | Fixture ID | Required class | State |
 | --- | --- | --- |
