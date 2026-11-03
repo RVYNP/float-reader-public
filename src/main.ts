@@ -3,6 +3,10 @@ import { defaultOptions, type Position, type ReaderAdapter, type ReaderOptions }
 import { desktop, native, state, browserFile, persist, openExternal, confirmDocument, openLibraryDocument, chooseDocument, imageFormats, type Opened, type WindowState } from './bridge';
 import { createLibrary } from './library';
 import { ImageAdapter } from './adapters/image';
+import { initAppearance } from './theme';
+import { appearanceSummary, createAppearanceSheet, paletteIcon } from './appearance';
+
+initAppearance();
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <header class="toolbar"><button id="library-toggle" aria-label="Document library" aria-controls="library-root" aria-expanded="false" title="Document library (Ctrl+B)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16m-3-12v8"/></svg></button><button id="open" title="Open file (Ctrl+O)">Open</button><div class="title"><strong id="filename">Float Reader</strong><span id="filekind">A little room to read</span></div><button id="pin" aria-pressed="false" title="Always on top (Ctrl+Shift+T)">Pin</button><button id="lock" aria-pressed="false" title="Lock dimensions (Ctrl+Shift+L)">Lock</button><button id="menu-toggle" aria-label="Reader menu" aria-expanded="false">···</button></header>
@@ -17,7 +21,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
     <button data-action="pin">Toggle pin <kbd>Ctrl Shift T</kbd></button><button data-action="lock">Toggle size lock <kbd>Ctrl Shift L</kbd></button>
     <button data-action="compact">Compact window</button><button data-action="reading">Reading window</button>
     <button data-action="fit-page">Fit page <kbd>Ctrl 0</kbd></button><button data-action="fit-width">Fit width <kbd>Ctrl 2</kbd></button><button data-action="rotate">Rotate page 90°</button>
-    <button data-action="smaller">Smaller text / zoom <kbd>Ctrl −</kbd></button><button data-action="larger">Larger text / zoom <kbd>Ctrl +</kbd></button><button data-action="type">Typography & wrapping</button>
+    <button data-action="smaller">Smaller text / zoom <kbd>Ctrl −</kbd></button><button data-action="larger">Larger text / zoom <kbd>Ctrl +</kbd></button><button data-action="appearance"><span class="menu-label">${paletteIcon}Appearance…</span><span class="menu-value" id="appearance-summary"></span></button><button data-action="type">Typography & wrapping</button>
     <button data-action="start">First location</button><button data-action="end">Last location</button><button data-action="screen-previous">Previous screen</button><button data-action="screen-next">Next screen</button>
     <button data-action="shortcuts">Keyboard shortcuts</button><button data-action="clear-recents">Clear recent files</button><button data-action="clear-data">Delete saved reading data…</button>
   </div></dialog>
@@ -25,11 +29,13 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <dialog id="password"><form><h2>Password required</h2><label for="secret">Document password</label><input id="secret" type="password" autocomplete="off"><div class="dialog-actions"><button type="button" data-close>Cancel</button><button type="submit" class="primary">Open document</button></div></form></dialog>
   <dialog id="contents"><div class="dialog-head"><h2>Contents</h2><button data-close aria-label="Close contents">×</button></div><div id="outline-list"></div></dialog>
   <dialog id="typography"><div class="dialog-head"><h2>Reading settings</h2><button data-close aria-label="Close settings">×</button></div><label>Text size <input id="font-size" type="number" min="12" max="40" value="18"></label><label>Line spacing <select id="line-height"><option>1.4</option><option selected>1.65</option><option>1.9</option><option>2.2</option></select></label><label>Margins <select id="margin"><option value="12">Narrow</option><option value="24" selected>Comfortable</option><option value="40">Wide</option></select></label><label class="check"><input id="wrap" type="checkbox" checked>Wrap plain text</label></dialog>
+  <dialog id="appearance"></dialog>
   <dialog id="shortcuts"><div class="dialog-head"><h2>Keyboard shortcuts</h2><button data-close aria-label="Close shortcuts">×</button></div><dl><dt>Next / previous page</dt><dd>PgDn / PgUp</dd><dt>Page mode navigation</dt><dd>Right / Left</dd><dt>Next / previous screen</dt><dd>Space / Shift Space</dd><dt>Scroll</dt><dd>Up / Down</dd><dt>First / last location</dt><dd>Home / End</dd><dt>Go to location</dt><dd>Ctrl G</dd><dt>Back after a jump</dt><dd>Alt Left</dd><dt>Open file</dt><dd>Ctrl O</dd><dt>Document library</dt><dd>Ctrl B</dd><dt>Pin / size lock</dt><dd>Ctrl Shift T / L</dd><dt>Fit page / width</dt><dd>Ctrl 0 / 2</dd><dt>Zoom / text size</dt><dd>Ctrl + / −</dd><dt>Dismiss a dialog</dt><dd>Escape</dd></dl></dialog>
   <dialog id="delete-data"><h2>Delete saved reading data?</h2><p>This removes saved positions and reading settings. Your documents and recent-file list remain. The current position will be saved again when you navigate.</p><div class="dialog-actions"><button data-close>Cancel</button><button id="confirm-delete" class="danger">Delete reading data</button></div></dialog>
   <input id="file-input" type="file" accept=".pdf,.epub,.md,.markdown,.txt,.png,.jpg,.jpeg,.webp,.gif,.avif,.bmp" hidden>`;
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+const appearanceSheet = createAppearanceSheet($<HTMLDialogElement>('appearance'));
 const scrubber = $<HTMLInputElement>('progress');
 let scrubbing = false, scrubRequest = 0;
 let reader: ReaderAdapter | undefined;
@@ -167,10 +173,11 @@ $('position').onclick = jump;
 $('jump').querySelector('form')!.onsubmit = event => { event.preventDefault(); void reader?.goTo($<HTMLInputElement>('target').value.trim()).then(() => closeDialog($<HTMLDialogElement>('jump'))).catch(error => { $('jump-error').textContent = String(error instanceof Error ? error.message : error); }); };
 async function toggle(which: 'pin' | 'lock') { if (!desktop) { notify('Pin and size lock are available in the desktop app.'); return; } try { updateWindow(await native(`set_${which}`, { enabled: !(which === 'pin' ? windowState.pinned : windowState.locked) })); } catch (error) { fail(error); } }
 $('pin').onclick = () => void toggle('pin'); $('lock').onclick = () => void toggle('lock');
-$('menu-toggle').onclick = () => { $('menu-toggle').setAttribute('aria-expanded', 'true'); showDialog('menu'); };
+$('menu-toggle').onclick = () => { $('appearance-summary').textContent = appearanceSummary(); $('menu-toggle').setAttribute('aria-expanded', 'true'); showDialog('menu'); };
 async function changeOptions(next: Partial<ReaderOptions>) { if (!reader) return; const previous = options; options = { ...options, ...next }; try { await reader.setOptions(options); showPosition(reader.getPosition()); } catch (error) { options = previous; fail(error); } }
 async function action(name: string) {
   if (name === 'goto') jump();
+  else if (name === 'appearance') appearanceSheet.open();
   else if (name === 'pin' || name === 'lock') await toggle(name);
   else if (name === 'compact' || name === 'reading') { if (!desktop) return notify('Window presets are available in the desktop app.'); updateWindow(await native('set_preset', { preset: name })); }
   else if (name === 'fit-page' || name === 'fit-width') await changeOptions({ fit: name === 'fit-page' ? 'page' : 'width', zoom: 1 });

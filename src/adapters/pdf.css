@@ -1,7 +1,8 @@
 .pdf-reader { overflow: auto; padding: 16px; background: var(--stage); }
-.pdf-page { position: relative; margin: 0 auto; background: white; box-shadow: 0 2px 12px #25203518; flex-shrink: 0; }
+/* Faithful: PDF pages are painted on white paper in every theme and never recolored. */
+.pdf-page { position: relative; margin: 0 auto; background: #ffffff; box-shadow: var(--shadow-page); flex-shrink: 0; }
 .pdf-page canvas { display: block; }
 .pdf-link { position: absolute; z-index: 4; cursor: pointer; }
-.pdf-link:hover, .pdf-link:focus-visible { outline: 2px solid var(--accent); background: #6358d820; }
-.pdf-render-status { position: absolute; top: 8px; left: 8px; z-index: 10; padding: 8px 12px; color: var(--fg); background: var(--surface); border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 2px 8px #25203520; width: max-content; max-width: calc(100% - 16px); }
-.pdf-scan-note { position: absolute; bottom: 4px; left: 4px; margin: 0; padding: 3px 6px; background: #fffffff0; color: #383838; font: 12px/1.4 system-ui; }
+.pdf-link:hover, .pdf-link:focus-visible { outline: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.pdf-render-status { position: absolute; top: 8px; left: 8px; z-index: 10; padding: 8px 12px; color: var(--fg); background: var(--surface); border: 1px solid var(--border); border-radius: 6px; box-shadow: var(--shadow-page); width: max-content; max-width: calc(100% - 16px); }
+.pdf-scan-note { position: absolute; bottom: 4px; left: 4px; margin: 0; padding: 3px 6px; background: color-mix(in srgb, var(--surface) 94%, transparent); color: var(--fg); font: 12px/1.4 system-ui; }
