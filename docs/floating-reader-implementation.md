@@ -24,6 +24,7 @@ not claimed as achieved, because idle CPU, cold launch and stress corpora remain
 - Format-specific position footer, bounded Back stack, save debounce/continuous-save interval, atomic native state replacement, unreadable-state backup and explicit save failure UI.
 - Floating view controls for PDF, image and fixed-layout EPUB (zoom −/level/+, fit-page/fit-width toggle, Hand tool, Single page / Two pages) sharing state with the zoom/fit/spread shortcuts. Hand tool (H, aria-pressed) and middle-button drag pan the scroll container 1:1 with link clicks preserved, including inside sandboxed fixed-layout EPUB frames; zoomed fixed-layout pages no longer lose their left/top edge to unreachable flex overflow.
 - Two-page spread for PDF and fixed-layout EPUB (Ctrl+3, menu, pill; persisted per document, single page by default): edge-to-edge pages with an inner gutter shade, cover-alone pairing by default with a "Cover page alone" opt-out, publisher page sides and right-to-left progression for EPUB, a common height for mixed page sizes, and fit page/width applied to the whole spread. Turns, Go to, Back, labels ("Pages 2–3 of 27") and the scrubber move by spread; the saved place is the first visible page. PDF spreads keep the bitmap cache and prefetch whole neighbouring spreads. Reflowable EPUB uses Foliate's two-column paginator. Panels narrower than 600 px (or portrait, for reflowable EPUB) show single pages, announce that two-page view is waiting, and switch back automatically.
+- Resizable, dockable library sidebar: pointer-captured divider drag with rAF-coalesced layout and reader hosts held at their width until release (one refit per drag), keyboard separator semantics, double-click reset, left/right docking mirrored in the toolbar icon, and persisted width/side re-clamped to the window.
 
 ## October 23 PDF resize-loop correction
 
@@ -42,7 +43,7 @@ Automated tests are intentionally narrower than the PRD acceptance corpus. Passi
 | Frontend type check and bundled production build | Pass; local PDF auxiliary resources copied during build |
 | Markdown/TXT unit tests | 41 passing: strict decoding, path/link filtering, raw HTML, tables/tasks, outline, jumps, history and disposal |
 | EPUB security unit tests | 12 passing: resource filtering, active-content removal, fixed viewport preservation and unsupported-media placeholders |
-| Library model unit tests | 5 passing: collection/document mutation rules |
+| Library model unit tests | 5 passing: collection/document mutation rules; 3 more cover sidebar width clamping (520 px, 55% of the window, 320 px reading panel) and saved-width fallback |
 | Native Rust checks | Compilation and 23 tests pass: unreadable-state backup, last-good atomic write, recents retention, file bounds, image confinement, catalog migration/rollback, folder indexing, and the macOS outer/client window-size conversion |
 | Browser shell tests | Text source-line jump/resume after reload, invalid replacement preservation, invalid Go to, safe Markdown, outline and minimum-size controls pass |
 | Real-browser anchor checks (`npm run test:layout`) | 9 passing: TXT source line 333 stays anchored through font/margin changes, resize, a scroll event delivered after a resize (deterministic form of the old drift) and reopen; Markdown heading anchor survives typography and minimum-size resize |

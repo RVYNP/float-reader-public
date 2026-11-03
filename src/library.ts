@@ -2,6 +2,7 @@ import './library.css';
 import { addDocuments, desktop, editLibrary, getLibrary, chooseSourceRoot, locateLibraryDocument, readLibraryThumbnail, indexFolder } from './bridge';
 import { emptyLibrary, type Collection, type Library, type LibraryDocument } from './catalog-types';
 import { isImage, searchText } from './library-query';
+import { clampLibraryWidth, libraryWidth, libraryWidthBounds, parseLibraryWidth, type LibrarySide } from './library-layout';
 
 type Callbacks = { open: (path: string) => Promise<boolean>; error: (error: unknown) => void };
 type Filter = { kind: 'all' | 'favorites' | 'unfiled' } | { kind: 'collection' | 'source'; id: string };
@@ -35,6 +36,14 @@ function descendantIds<T extends { id: string; parentId: string | null }>(items:
   while (pending.length) for (const child of children.get(pending.pop()!) ?? []) if (!result.has(child)) { result.add(child); pending.push(child); }
   return result;
 }
+// Lucide outlines, drawn at the toolbar's stroke weight.
+function icon(paths: string) {
+  return `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+}
+const panelIcon = { left: icon('<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/>'), right: icon('<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M15 3v18"/>') };
+const closeIcon = icon('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>');
+function savedPreference(key: string) { try { return localStorage.getItem(key); } catch { return null; } }
+function savePreference(key: string, value: string) { try { localStorage.setItem(key, value); } catch { /* Optional preference. */ } }
 function orderedTree<T extends { id: string; name: string; parentId: string | null }>(items: T[]): { item: T; depth: number }[] {
   const ids = new Set(items.map(item => item.id)); const visited = new Set<string>(); const result: { item: T; depth: number }[] = [];
   const children = new Map<string | null, T[]>();
@@ -71,8 +80,10 @@ export function createLibrary(root: HTMLElement, callbacks: Callbacks): { refres
   root.classList.add('library-root');
   const backdrop = button('', 'Close library'); backdrop.className = 'library-backdrop'; backdrop.tabIndex = -1;
   const panel = element('aside', 'library-panel'); panel.setAttribute('aria-label', 'Reference library');
-  const header = element('div', 'library-header'); const close = button('×', 'Close library');
-  header.append(element('h2', '', 'Library'), close);
+  const header = element('div', 'library-header'); const headerActions = element('div', 'library-header-actions');
+  const dock = button('', undefined, 'dock'); dock.className = 'library-dock';
+  const close = button('', 'Close library'); close.innerHTML = closeIcon; close.title = 'Close library';
+  headerActions.append(dock, close); header.append(element('h2', '', 'Library'), headerActions);
   const tools = element('div', 'library-tools');
   const add = button('Add files', 'Add local documents or images', 'add'); add.className = 'library-add';
   const sourcesButton = button('Sources', 'Index folders and manage source locations', 'sources'); tools.append(add, sourcesButton);
@@ -91,8 +102,71 @@ export function createLibrary(root: HTMLElement, callbacks: Callbacks): { refres
   const documents = element('div', 'library-documents'); documents.setAttribute('aria-label', 'Library items'); documents.setAttribute('role', 'list');
   const pager = element('div', 'library-pager');
   const fileInput = element('input'); fileInput.type = 'file'; fileInput.accept = '.pdf,.epub,.md,.markdown,.txt,.png,.jpeg,.jpg,.webp,.gif,.avif,.bmp'; fileInput.multiple = true; fileInput.hidden = true;
-  panel.append(header, tools, searchLabel, search, facets, navigation, documentsHead, documents, pager, fileInput); root.replaceChildren(backdrop, panel);
+  panel.append(header, tools, searchLabel, search, facets, navigation, documentsHead, documents, pager, fileInput);
+  const resizeHandle = element('div', 'library-resize'); resizeHandle.tabIndex = 0;
+  for (const [name, value] of [['role', 'separator'], ['aria-orientation', 'vertical'], ['aria-label', 'Resize library'], ['aria-controls', root.id]]) resizeHandle.setAttribute(name, value);
+  const grip = element('span', 'library-resize-grip'); grip.append(element('span'), element('span'), element('span'));
+  const tip = element('span', 'library-resize-tip'); tip.setAttribute('aria-hidden', 'true'); const tipValue = element('span', 'library-resize-value');
+  tip.append(element('span', '', 'Drag to resize · double-click to reset'), tipValue); resizeHandle.append(grip, tip);
+  root.replaceChildren(backdrop, panel, resizeHandle);
   const imageNavigation = element('div', 'library-image-navigation'); imageNavigation.hidden = true; imageNavigation.setAttribute('aria-label', 'Images in selected collection'); imageNavigation.setAttribute('role', 'group'); workspace?.append(imageNavigation);
+
+  // Side-by-side width and dock side. The stored width is the user's preference; the applied
+  // width is re-clamped to the current window so growing the window restores it.
+  const widthKey = 'float-reader:library-width', sideKey = 'float-reader:library-side';
+  let preferredWidth = parseLibraryWidth(savedPreference(widthKey)); let width: number = libraryWidth.default;
+  let side: LibrarySide = savedPreference(sideKey) === 'right' ? 'right' : 'left';
+  const viewport = () => layout?.clientWidth || window.innerWidth;
+  function applyWidth(next: number) {
+    const bounds = libraryWidthBounds(viewport()); width = clampLibraryWidth(next, viewport());
+    root.style.setProperty('--library-width', `${width}px`); tipValue.textContent = `${width} px`;
+    resizeHandle.setAttribute('aria-valuenow', String(width)); resizeHandle.setAttribute('aria-valuetext', `${width} pixels wide`);
+    resizeHandle.setAttribute('aria-valuemin', String(bounds.min)); resizeHandle.setAttribute('aria-valuemax', String(bounds.max));
+  }
+  function setWidth(next: number) { applyWidth(next); preferredWidth = width; savePreference(widthKey, String(width)); }
+  function applySide() {
+    const other = side === 'left' ? 'right' : 'left'; layout?.classList.toggle('library-right', side === 'right');
+    toggleButton?.setAttribute('data-library-side', side);
+    dock.innerHTML = panelIcon[other]; dock.setAttribute('aria-label', `Move library to the ${other}`); dock.title = `Move library to the ${other}`;
+  }
+  dock.onclick = () => { side = side === 'left' ? 'right' : 'left'; savePreference(sideKey, side); applySide(); };
+  // While dragging, only the panels move: reader hosts keep their width (anchored away from the
+  // handle) so adapters refit once, through their ResizeObserver, when the drag ends.
+  let drag: { pointer: number; x: number; start: number; next?: number } | undefined; let dragFrame = 0;
+  function setResizing(on: boolean) {
+    if (on && workspace) workspace.style.setProperty('--reader-frozen-width', `${workspace.clientWidth}px`);
+    document.documentElement.classList.toggle('library-resizing', on);
+  }
+  resizeHandle.addEventListener('pointerdown', event => {
+    if (event.button !== 0 || drag || !wide.matches) return;
+    event.preventDefault(); resizeHandle.setPointerCapture(event.pointerId);
+    drag = { pointer: event.pointerId, x: event.clientX, start: width }; setResizing(true);
+  });
+  resizeHandle.addEventListener('pointermove', event => {
+    if (drag?.pointer !== event.pointerId) return;
+    const delta = event.clientX - drag.x; drag.next = drag.start + (side === 'left' ? delta : -delta);
+    if (!dragFrame) dragFrame = requestAnimationFrame(() => { dragFrame = 0; if (drag?.next !== undefined) applyWidth(drag.next); });
+  });
+  function endDrag(event: PointerEvent) {
+    if (drag?.pointer !== event.pointerId) return;
+    const { next } = drag; drag = undefined; cancelAnimationFrame(dragFrame); dragFrame = 0;
+    if (next !== undefined) setWidth(next);
+    setResizing(false);
+    if (resizeHandle.hasPointerCapture(event.pointerId)) resizeHandle.releasePointerCapture(event.pointerId);
+  }
+  for (const type of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) resizeHandle.addEventListener(type, endDrag);
+  resizeHandle.addEventListener('dblclick', () => setWidth(libraryWidth.default));
+  resizeHandle.addEventListener('keydown', event => {
+    if (event.ctrlKey || event.altKey || event.metaKey) return;
+    // Arrows move the separator visually, so they mirror when the library is docked right.
+    const step = (event.shiftKey ? libraryWidth.largeStep : libraryWidth.step) * (side === 'left' ? 1 : -1);
+    const bounds = libraryWidthBounds(viewport());
+    const next = event.key === 'ArrowRight' ? width + step : event.key === 'ArrowLeft' ? width - step : event.key === 'Home' ? bounds.min : event.key === 'End' ? bounds.max : event.key === 'Enter' ? libraryWidth.default : undefined;
+    if (next === undefined) return;
+    event.preventDefault(); setWidth(next);
+  });
+  let windowFrame = 0;
+  window.addEventListener('resize', () => { if (!windowFrame) windowFrame = requestAnimationFrame(() => { windowFrame = 0; if (!drag) applyWidth(preferredWidth); }); });
 
   function applyVisibility() {
     root.hidden = !visible; layout?.classList.toggle('library-open', visible); toggleButton?.setAttribute('aria-expanded', String(visible));
@@ -409,6 +483,6 @@ export function createLibrary(root: HTMLElement, callbacks: Callbacks): { refres
     try { const next = await getLibrary(); if (token !== revision) return; library = next; loaded = true; loadError = false; rebuildIndex(); render(); }
     catch (error) { if (token !== revision) return; loadError = true; render(); callbacks.error(error); }
   }
-  toggleButton?.setAttribute('aria-controls', root.id); rebuildIndex(); applyVisibility(); render();
+  toggleButton?.setAttribute('aria-controls', root.id); applySide(); applyWidth(preferredWidth); rebuildIndex(); applyVisibility(); render();
   return { refresh, toggle: () => { toggle(); if (visible && loadError) void refresh(); } };
 }
