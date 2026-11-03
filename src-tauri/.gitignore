@@ -1,0 +1,7 @@
+/target
+/gen/schemas
+# Generated at build time by build.rs — the repository intentionally ships no
+# binary image assets. See build.rs for the artwork.
+/icons/icon.png
+/icons/icon.icns
+/icons/icon.ico

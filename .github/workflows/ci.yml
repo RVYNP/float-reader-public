@@ -1,0 +1,92 @@
+# Cross-platform CI for Float Reader.
+#
+# The point of this file is that the SAME suite runs on Windows and macOS. That
+# matters because the app is a Tauri desktop app whose webview is different on
+# every OS (WebView2/Chromium on Windows, WKWebView on macOS), and because the
+# test harness used to be Windows-only: playwright.config.ts hardcoded
+# channel 'msedge' and the smoke scripts hardcoded dist/Float Reader.exe.
+#
+# No secrets are used and nothing is published. Each job only builds and tests.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            name: Windows (WebView2)
+            # No `channel` override is needed on Windows: Edge is the WebView2
+            # runtime and is always present on windows-latest.
+          - os: macos-latest
+            name: macOS (WKWebView)
+    env:
+      # Keep Rust and Node caches out of the repo and reproducible.
+      CARGO_TERM_COLOR: always
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        # playwright.config.ts prefers a branded Chrome/Edge and falls back to a
+        # cached Chromium build; windows-latest has Edge, macOS must download
+        # Chromium. --with-deps installs the OS libraries Playwright needs.
+        if: runner.os == 'macOS'
+        run: npx playwright install --with-deps chromium
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Browser end-to-end tests
+        run: npm run test:e2e
+
+      - name: Text layout anchor check
+        run: npm run test:layout
+
+      - name: Rust unit tests (locked)
+        run: cargo test --manifest-path src-tauri/Cargo.toml --locked
+
+      - name: Release build (custom-protocol)
+        run: cargo build --manifest-path src-tauri/Cargo.toml --locked --features custom-protocol --release
+
+      - name: Bundle the macOS .app
+        if: runner.os == 'macOS'
+        run: npx tauri build --bundles app

@@ -1,0 +1,15 @@
+node_modules/
+dist/
+src-tauri/target/
+src-tauri/gen/
+test-results/
+playwright-report/
+.fixtures/
+*.log
+public/pdfjs/
+.research/
+.env
+.env.*
+!.env.example
+.DS_Store
+desktop.ini
