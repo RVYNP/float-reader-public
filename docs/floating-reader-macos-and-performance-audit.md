@@ -42,7 +42,9 @@ defects were in build configuration and one window-geometry calculation.
   the script detects that, falls back to `.app`-only, and still delivers a signed bundle. Expect
   the `.dmg` to build on a standard desktop session.
 - Existing Windows paths (NSIS, generated `.ico`, WebView2) are preserved through `cfg` guards
-  rather than deletion, so the Windows build is unchanged.
+  rather than deletion. *Follow-up on Windows:* two shared window-size changes did alter Windows
+  behaviour (the minimum grew by the frame; locked windows stopped shrinking to a smaller work
+  area). Both were restored and measured on a Windows rebuild — see the implementation notes.
 
 ### Honest limits of this port
 
@@ -109,6 +111,9 @@ every turn**.
 2. **Bounded page-bitmap cache with idle neighbour prefetch.** ~32 MiB of canvas backing store,
    oldest-first eviction, cleared on document close. A cached turn is one `drawImage`, which is
    where the −94% on repeated turns comes from. This is a deliberate trade of memory for latency.
+   *Follow-up:* the first version cached a canvas before its render finished (a cancelled turn
+   left a half-painted page in the cache) and keyed it without rotation (0° and 180° collide).
+   Only completed rasters are cached now, and the key includes rotation.
 3. **O(n²) → O(1) EPUB position map.** `updatePosition` ran on every scroll frame and summed the
    full spine-weight array twice; now a prefix sum. Same content-weighted percentages.
 4. **Backing store capped by displayed pixels** rather than a flat 2× device-pixel ratio.
@@ -132,41 +137,27 @@ The guard still exists in upstream `main`, so it is **documented, not silently p
 it properly means changing the vendored paginator through the existing
 `scripts/secure-foliate.mjs` patch step and validating turn correctness in a real WKWebView.
 
-### A correctness bug found while building the harness — not fixed, deliberately
+### A correctness bug found while building the harness — since fixed
 
-`tests/browser/text-layout.mjs` intermittently fails with
-`Resizing must keep the source anchor (got line 665)`. This is **a real product bug, not test
-flakiness**: resize the window while reading a TXT/Markdown document and the reading position can
-jump from source line 333 to 665 — roughly half-way through the document to two-thirds, and the
-drift is permanent (the saved locator is wrong afterwards).
+`tests/browser/text-layout.mjs` intermittently failed with
+`Resizing must keep the source anchor (got line 665)`: resizing while reading TXT/Markdown could
+permanently move the reading position from source line 333 to 665 (7 of 15 runs here; 14 of 15 on
+Windows).
 
-Measured failure rate on the unmodified code: **7 of 15 runs**. Traced to the moment of failure:
+The diagnosis recorded in this audit — a `ResizeObserver` event dropped while `restore()` was in
+flight — was wrong: `restore()` is synchronous, so no callback can observe its `restoring` flag,
+which is why none of the four attempted fixes moved the failure rate. An event trace on Windows
+showed the actual sequence:
 
-- The 760×900 resize produced **zero** `restore()` calls (`restores: []`), while the anchor had
-  already moved to 665.
-- `text.ts` `restore()` sets `this.restoring = true`, and its `ResizeObserver` callback refuses to
-  act while `this.restoring` is set (`if (... && !this.restoring)`) — but it never records that a
-  resize was skipped. When a resize lands during an in-flight restore (for example inside
-  `setOptions`, whose `capture()` does a long synchronous binary search over text ranges), the
-  event is **dropped permanently**.
-- The in-flight restore then publishes a position computed against the pre-resize layout, and the
-  dropped event is never retried, so nothing corrects it.
+1. `setOptions()` → `restore()` writes `scrollTop`, queuing a scroll event.
+2. The window resizes before that event is delivered.
+3. The scroll handler's frame callback re-captures the anchor against the new layout (665).
+4. The `ResizeObserver` callback then faithfully restores that wrong anchor.
 
-Four candidate fixes were implemented and measured; **all were reverted**, because none beat the
-baseline:
-
-| Attempt | Result (of 15 runs, baseline 8 pass) |
-| --- | --- |
-| Re-publish after the in-flight restore | 5 pass — **worse** |
-| Coalesce resize bursts via `setTimeout` | 5 pass — **worse** |
-| Wait two `rAF`s for layout to settle, pin the anchor | 9 pass — noise |
-| Retry the dropped resize once, re-reading `getPosition()` | 9 pass — noise |
-
-Shipping any of these would have traded a readable, reproducible defect report for an unproven
-change that samples say does not work. The correct next step is a targeted regression test around
-`restore()` reentrancy (the current harness measures the symptom, not the state machine) plus a
-proper fix. Note the related *page* behaviour: a second resize debounce fires ~95 ms after the fit
-is re-applied and re-renders — visible in `e2e/renderers.spec.ts`, left unasserted.
+The adapter now records the host size each anchor was captured at; a scroll callback that finds a
+different size re-anchors instead of capturing. The layout check includes a deterministic form of
+the race (it failed 4/4 before the fix) and passes 20 of 20 full runs on Windows. The second PDF
+resize debounce noted in `e2e/renderers.spec.ts` is unchanged and still unasserted.
 
 ### Remaining performance gaps
 

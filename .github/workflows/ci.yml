@@ -6,7 +6,8 @@
 # test harness used to be Windows-only: playwright.config.ts hardcoded
 # channel 'msedge' and the smoke scripts hardcoded dist/Float Reader.exe.
 #
-# No secrets are used and nothing is published. Each job only builds and tests.
+# No secrets are used and nothing is published. Each job only builds and tests;
+# the unsigned Windows installer is kept as a short-lived workflow artifact.
 name: CI
 
 on:
@@ -91,6 +92,43 @@ jobs:
 
       - name: Release build (custom-protocol)
         run: cargo build --manifest-path src-tauri/Cargo.toml --locked --features custom-protocol --release
+
+      # WebView2 honours a remote-debugging port, so on Windows the smoke scripts drive
+      # the real release binary over CDP: embedded UI, CLI open, IPC, pin, lock, save,
+      # raw-byte transport and clean close. The MSVC build links the WebView2 loader
+      # statically, so the binary runs from the target directory.
+      #
+      # GitHub's Windows runners are elevated, and WebView2 Runtime 150+ ignores
+      # WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS for elevated hosts by design
+      # (tauri-apps/wry#1782, MicrosoftEdge/WebView2Feedback#5645). HKLM policy is still
+      # honoured, so the runner opens the same port through the per-executable policy.
+      - name: Open WebView2 CDP for the smoke test (runner-only policy)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $key = 'HKLM:\SOFTWARE\Policies\Microsoft\Edge\WebView2\AdditionalBrowserArguments'
+          New-Item -Path $key -Force | Out-Null
+          New-ItemProperty -Path $key -Name 'float-reader.exe' -Value '--remote-debugging-port=19126' -PropertyType String -Force | Out-Null
+
+      - name: Native smoke test (WebView2)
+        if: runner.os == 'Windows'
+        env:
+          FLOAT_READER_BINARY: src-tauri/target/release/float-reader.exe
+        run: npm run test:native
+
+      # The Windows deliverable: tauri.windows.conf.json narrows bundling to NSIS.
+      - name: Bundle the Windows installer (NSIS)
+        if: runner.os == 'Windows'
+        run: npx tauri build --bundles nsis
+
+      - name: Keep the Windows installer
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: float-reader-windows-nsis
+          path: src-tauri/target/release/bundle/nsis/*.exe
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Bundle the macOS .app
         if: runner.os == 'macOS'

@@ -138,7 +138,8 @@ export class TextAdapter implements ReaderAdapter {
   private resize?: ResizeObserver;
   private disposed = false;
   private atEnd = false;
-  private restoring = false;
+  /** Host size the current anchor was captured against; a mismatch means pending reflow, not reading. */
+  private anchorGeometry = '';
   private frame = 0;
   private imageUrls: string[] = [];
   private listener?: (event: Event) => void;
@@ -191,7 +192,7 @@ export class TextAdapter implements ReaderAdapter {
     host.scrollTop = 0;
     this.publish();
     this.resize = new ResizeObserver(() => {
-      if (!this.disposed && this.anchor && !this.restoring) void this.restore(this.anchor);
+      if (!this.disposed && this.anchor) void this.restore(this.anchor);
     });
     this.resize.observe(host);
     // Resource resolution is delegated to the native boundary; never fetch document URLs.
@@ -223,10 +224,20 @@ export class TextAdapter implements ReaderAdapter {
     }));
   }
 
+  private geometry(): string { return `${this.host.clientWidth}x${this.host.clientHeight}`; }
+
   private onScroll = (): void => {
-    if (this.restoring || this.disposed) return;
-    this.atEnd = this.host.scrollHeight > this.host.clientHeight && this.host.scrollTop >= this.host.scrollHeight - this.host.clientHeight - 2;
-    if (!this.frame) this.frame = requestAnimationFrame(() => { this.frame = 0; if (!this.disposed) this.publish(); });
+    if (this.disposed || this.frame) return;
+    this.frame = requestAnimationFrame(() => {
+      this.frame = 0;
+      if (this.disposed) return;
+      // Every restore writes scrollTop, so a scroll event can be delivered after the host has
+      // resized but before the ResizeObserver runs. Capturing then would read the reflowed
+      // layout and permanently replace the anchor; re-anchor instead.
+      if (this.anchor && this.geometry() !== this.anchorGeometry) { void this.restore(this.anchor); return; }
+      this.atEnd = this.host.scrollHeight > this.host.clientHeight && this.host.scrollTop >= this.host.scrollHeight - this.host.clientHeight - 2;
+      this.publish();
+    });
   };
 
   private capture(): TextAnchor {
@@ -270,7 +281,7 @@ export class TextAdapter implements ReaderAdapter {
       scrub: { current: this.atEnd ? this.offsets.length : locator.line, total: this.offsets.length, unit: 'line' } };
   }
 
-  private publish(): void { const position = this.getPosition(); this.anchor = position.locator as TextAnchor; this.context.onPosition(position); }
+  private publish(): void { const position = this.getPosition(); this.anchor = position.locator as TextAnchor; this.anchorGeometry = this.geometry(); this.context.onPosition(position); }
 
   private remember(): void { this.history.push(this.getPosition().locator); if (this.history.length > 20) this.history.shift(); }
 
@@ -307,45 +318,42 @@ export class TextAdapter implements ReaderAdapter {
 
   async restore(locator: Locator): Promise<void> {
     if (this.disposed || locator.kind !== this.format) return;
-    this.restoring = true;
-    try {
-      let block = this.blocks.find(candidate => candidate.line === locator.blockLine) ?? this.blocks.find(candidate => candidate.line === locator.line);
-      let offset = typeof locator.offset === 'number' && Number.isFinite(locator.offset) ? Math.max(0, Math.floor(locator.offset)) : 0;
-      const context = typeof locator.context === 'string' ? locator.context : '';
-      if (context) {
-        const preferred = block?.element.textContent?.indexOf(context) ?? -1;
-        if (preferred >= 0) offset = preferred + (Number(locator.contextOffset) || 0);
-        else {
-          const found = this.blocks.find(candidate => candidate.element.textContent?.includes(context));
-          if (found) { block = found; offset = (found.element.textContent?.indexOf(context) ?? 0) + (Number(locator.contextOffset) || 0); }
-        }
+    let block = this.blocks.find(candidate => candidate.line === locator.blockLine) ?? this.blocks.find(candidate => candidate.line === locator.line);
+    let offset = typeof locator.offset === 'number' && Number.isFinite(locator.offset) ? Math.max(0, Math.floor(locator.offset)) : 0;
+    const context = typeof locator.context === 'string' ? locator.context : '';
+    if (context) {
+      const preferred = block?.element.textContent?.indexOf(context) ?? -1;
+      if (preferred >= 0) offset = preferred + (Number(locator.contextOffset) || 0);
+      else {
+        const found = this.blocks.find(candidate => candidate.element.textContent?.includes(context));
+        if (found) { block = found; offset = (found.element.textContent?.indexOf(context) ?? 0) + (Number(locator.contextOffset) || 0); }
       }
-      if (!block) {
-        const fraction = typeof locator.fraction === 'number' && Number.isFinite(locator.fraction) ? Math.min(1, Math.max(0, locator.fraction)) : 0;
-        const line = lineAtOffset(this.offsets, fraction * this.source.length);
-        block = this.blocks.filter(candidate => candidate.line <= line).at(-1) ?? this.blocks[0];
-      }
-      if (block) {
-        let targetTop = block.element.getBoundingClientRect().top;
-        const walker = document.createTreeWalker(block.element, NodeFilter.SHOW_TEXT);
-        let node: Node | null;
-        while ((node = walker.nextNode())) {
-          const length = node.textContent?.length ?? 0;
-          if (!length) continue;
-          if (offset > length) { offset -= length; continue; }
-          if (length) {
-            const range = document.createRange();
-            range.setStart(node, Math.min(offset, length - 1)); range.setEnd(node, Math.min(offset + 1, length));
-            const rect = range.getBoundingClientRect(); if (rect.height) targetTop = rect.top;
-          }
-          break;
+    }
+    if (!block) {
+      const fraction = typeof locator.fraction === 'number' && Number.isFinite(locator.fraction) ? Math.min(1, Math.max(0, locator.fraction)) : 0;
+      const line = lineAtOffset(this.offsets, fraction * this.source.length);
+      block = this.blocks.filter(candidate => candidate.line <= line).at(-1) ?? this.blocks[0];
+    }
+    if (block) {
+      let targetTop = block.element.getBoundingClientRect().top;
+      const walker = document.createTreeWalker(block.element, NodeFilter.SHOW_TEXT);
+      let node: Node | null;
+      while ((node = walker.nextNode())) {
+        const length = node.textContent?.length ?? 0;
+        if (!length) continue;
+        if (offset > length) { offset -= length; continue; }
+        if (length) {
+          const range = document.createRange();
+          range.setStart(node, Math.min(offset, length - 1)); range.setEnd(node, Math.min(offset + 1, length));
+          const rect = range.getBoundingClientRect(); if (rect.height) targetTop = rect.top;
         }
-        this.host.scrollTop += targetTop - this.host.getBoundingClientRect().top - 2;
-      } else this.host.scrollTop = 0;
-      this.atEnd = locator.fraction === 1;
-      if (this.atEnd) this.host.scrollTop = this.host.scrollHeight;
-      this.publish();
-    } finally { this.restoring = false; }
+        break;
+      }
+      this.host.scrollTop += targetTop - this.host.getBoundingClientRect().top - 2;
+    } else this.host.scrollTop = 0;
+    this.atEnd = locator.fraction === 1;
+    if (this.atEnd) this.host.scrollTop = this.host.scrollHeight;
+    this.publish();
   }
 
   private applyOptions(options: ReaderOptions): void {

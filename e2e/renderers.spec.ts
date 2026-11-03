@@ -121,6 +121,35 @@ test('PDF loading does not change scroll geometry or repeatedly refit an idle pa
   }
 });
 
+test('PDF page-bitmap cache never reuses pixels across rotation', async ({ page }) => {
+  const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
+  await page.goto('/');
+  await page.locator('#file-input').setInputFiles({ name: 'rotation.pdf', mimeType: 'application/pdf', buffer: pdfFixture() });
+  await expect(page.locator('.textLayer')).toContainText('First page with selectable text');
+  // Vertical centre of the painted text, as a fraction of canvas height. Page 1 carries its
+  // only line near the top, so upright reads < .5 and a 180° turn must read > .5.
+  const inkCentre = () => page.locator('.pdf-page canvas').evaluate((canvas: HTMLCanvasElement) => {
+    const { data, width, height } = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height);
+    let sum = 0, count = 0;
+    for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) { const i = (y * width + x) * 4; if (data[i + 3] > 0 && data[i] < 128) { sum += y; count++; } }
+    return count ? sum / count / height : -1;
+  });
+  const rotate = async () => {
+    await page.getByRole('button', { name: 'Reader menu' }).click();
+    await page.getByRole('button', { name: 'Rotate page 90°' }).click();
+    await expect(page.locator('.pdf-render-status')).toHaveCount(0);
+    await expect(page.locator('.textLayer')).toContainText('First page');
+  };
+  const upright = await inkCentre();
+  expect(upright).toBeGreaterThan(0); expect(upright).toBeLessThan(.5);
+  // 0° and 180° share pixel dimensions, so a size-only cache key would blit the upright page.
+  await rotate(); await rotate();
+  expect(await inkCentre()).toBeGreaterThan(.5);
+  await rotate(); await rotate();
+  expect(Math.abs(await inkCentre() - upright)).toBeLessThan(.02);
+  expect(errors).toEqual([]);
+});
+
 test('reflowable EPUB renders real chapters, blocks scripts/network, and follows links/back', async ({ page }) => {
   const remote: string[] = [], errors: string[] = [];
   page.on('pageerror', e => errors.push(e.message));
