@@ -1,0 +1,121 @@
+# Developing Float Reader
+
+Build, test and packaging notes. For what the app does, see the [README](../README.md) and the
+[user guide](user-guide.md).
+
+Rust/Tauri owns local file access, window controls, document identity and saved state. The small
+web interface uses PDF.js, foliate-js and markdown-it. This is an implementation candidate, **not a
+release that has passed all P0 requirements**; see
+[implementation and validation status](floating-reader-implementation.md).
+
+Source, lockfiles, tests, [research](floating-reader-research-2026-10-22.md) and
+[requirements](floating-reader-prd.md) are self-contained in this repository. Generated executables,
+dependencies, document files and personal reading/library data are not committed.
+
+## Requirements
+
+- Node.js 20.19+ or 22.12+ and npm (required by Vite)
+- Rust 1.90+ with a native toolchain — Visual Studio Build Tools on Windows, Xcode Command Line
+  Tools on macOS
+- Windows only: WebView2 (preinstalled on Windows 11)
+
+## Run
+
+```bash
+npm ci                 # installs dependencies and applies the foliate sandbox patch
+npm run desktop        # native app with hot reload
+npm run dev            # browser preview at http://127.0.0.1:1420
+```
+
+`npm run dev` runs the browser preview. It supports local file selection, browser-local resume, and
+a library backed by IndexedDB copies of selected files. Pinning, size lock, native recent files, and
+authorized relative images require the desktop app.
+
+## Build a distributable
+
+**macOS**
+
+```bash
+npm run package:macos            # -> dist/Float Reader.app (and a .dmg when available)
+```
+
+Produces an arm64 `.app` with a generated icon and an ad-hoc signature. It is not notarized, so
+first launch requires right-click → **Open** (or `xattr -dr com.apple.quarantine`).
+
+**Windows**
+
+```powershell
+./src-tauri/build-native.ps1     # -> dist/Float Reader.exe + WebView2Loader.dll
+npm run package                  # NSIS installer (targets pinned by tauri.windows.conf.json)
+```
+
+Keep `WebView2Loader.dll` beside the `.exe`. The executable embeds the reader interface and needs
+no development server.
+
+Each platform narrows its own bundle targets, so neither inherits the other's installers:
+`tauri.windows.conf.json` pins `["nsis"]` and `tauri.macos.conf.json` pins `["app", "dmg"]`. The
+base `tauri.conf.json` stays neutral with `"all"`.
+
+`npm ci` and every production build run the checked-in foliate sandbox patch and copy PDF
+fonts/CMaps/WASM locally. Do not skip this step. No runtime CDN is used.
+
+On the GNU Windows toolchain, `windres` can fail when its build output path contains spaces. Set a
+task-specific target directory first:
+
+```powershell
+$env:CARGO_TARGET_DIR = Join-Path $env:TEMP 'float-reader-target'
+```
+
+## Test
+
+```bash
+npm test                                          # frontend unit tests
+npm run test:e2e                                  # Playwright browser scenarios
+cargo test --manifest-path src-tauri/Cargo.toml   # native tests (one is Unix-only)
+npm run test:layout                               # text anchor layout check
+npm run test:native                               # smoke test of the built app
+npm run perf                                      # performance report
+```
+
+Browser tests pick a browser automatically: `CHROME_PATH`, then a branded Chrome/Edge/Chromium, then
+a cached Playwright Chromium. Nothing is downloaded at test time. Tests construct their own small
+documents; they do not use production files.
+
+`test:native` differs by platform. On Windows it drives the real WebView2 over CDP and asserts the
+full IPC surface. On macOS, WKWebView exposes no CDP endpoint, so it verifies launch, liveness and
+clean quit, and skips the transport assertions with an explicit reason. Quit any running instance
+first: `tauri-plugin-single-instance` makes a second launch hand off and exit immediately, which
+cannot be distinguished from a failure. Run it from a non-elevated shell: WebView2 Runtime 150+
+ignores the debugging switch for elevated processes, so the port never opens (CI, whose runners are
+elevated, sets the equivalent HKLM WebView2 policy instead).
+
+CI ([`.github/workflows/ci.yml`](../.github/workflows/ci.yml)) runs the same suite on
+`windows-latest` and `macos-latest`, builds the release binary, runs the native smoke test and builds
+the NSIS installer on Windows, and bundles the `.app` on macOS.
+
+> **Windows build status.** After the macOS port, the Windows build was rebuilt and re-tested on
+> Windows 11 x64 with WebView2: `build-native.ps1` (GNU toolchain) produces the portable executable,
+> `npm run package` produces the NSIS installer, and `npm run test:native` passes against the real
+> WebView2 app. Measured on that build, the unlocked minimum is 360×420 outer logical pixels and a
+> locked window's minimum equals its maximum equals the captured outer size.
+
+## Security model
+
+Source files remain unchanged. Document scripts and automatic external-resource requests are
+blocked. EPUB frames are sandboxed without script permission. Markdown raw HTML is disabled; local
+images resolve only inside the selected document's directory tree. External HTTP(S) links require a
+click. Unsupported image paths receive placeholders.
+
+## Current boundaries
+
+See [implementation and validation status](floating-reader-implementation.md) for tested behavior
+and remaining release gates, and the
+[macOS and performance audit](floating-reader-macos-and-performance-audit.md) for what the port
+changed and what it did not fix.
+
+In particular, this is not yet a measured lightweight release. Whole-file binary IPC, text DOM size,
+the full EPUB fidelity corpus, Narrator, monitor changes, Windows snapping, clean-account
+installation and several performance budgets still need work or evidence.
+
+Generated assets, fixtures, browser results, executable files, generated icons and Cargo output are
+ignored. Dependency versions are pinned in `package-lock.json` and `src-tauri/Cargo.lock`.
