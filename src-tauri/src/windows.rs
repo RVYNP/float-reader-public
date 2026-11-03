@@ -1,0 +1,314 @@
+use crate::{Shared, WindowState};
+use tauri::{
+    Emitter, LogicalSize, Manager, PhysicalPosition, State, WebviewWindow, Window, WindowEvent,
+};
+
+fn err(error: impl std::fmt::Display) -> String {
+    error.to_string()
+}
+
+fn frame(window: &WebviewWindow) -> Result<(f64, f64), String> {
+    let scale = window.scale_factor().map_err(err)?;
+    let outer = window.outer_size().map_err(err)?;
+    let inner = window.inner_size().map_err(err)?;
+    Ok((
+        outer.width.saturating_sub(inner.width) as f64 / scale,
+        outer.height.saturating_sub(inner.height) as f64 / scale,
+    ))
+}
+
+fn set_outer(window: &WebviewWindow, width: f64, height: f64) -> Result<(), String> {
+    let (border_x, border_y) = frame(window)?;
+    window
+        .set_size(LogicalSize::new(
+            (width - border_x).max(1.0),
+            (height - border_y).max(1.0),
+        ))
+        .map_err(err)
+}
+
+fn apply_lock(window: &WebviewWindow, target: &WindowState) -> Result<(), String> {
+    // Tauri size setters and constraints refer to client dimensions; the persisted
+    // contract is outer dimensions. Recompute the border after changing styles.
+    window.set_max_size(None::<LogicalSize<f64>>).map_err(err)?;
+    window.set_min_size(None::<LogicalSize<f64>>).map_err(err)?;
+    window.set_maximizable(!target.locked).map_err(err)?;
+    window.set_resizable(!target.locked).map_err(err)?;
+    let (border_x, border_y) = frame(window)?;
+    if target.locked {
+        let size = LogicalSize::new(
+            (target.width - border_x).max(1.0),
+            (target.height - border_y).max(1.0),
+        );
+        window.set_min_size(Some(size)).map_err(err)?;
+        window.set_max_size(Some(size)).map_err(err)?;
+    } else {
+        // Small displays are allowed to use their entire available area.
+        let monitor = window.current_monitor().map_err(err)?;
+        let (max_w, max_h) = monitor
+            .map(|m| {
+                (
+                    m.work_area().size.width as f64 / m.scale_factor(),
+                    m.work_area().size.height as f64 / m.scale_factor(),
+                )
+            })
+            .unwrap_or((360.0, 420.0));
+        window
+            .set_min_size(Some(LogicalSize::new(
+                (360.0_f64.min(max_w) - border_x).max(1.0),
+                (420.0_f64.min(max_h) - border_y).max(1.0),
+            )))
+            .map_err(err)?;
+    }
+    set_outer(window, target.width, target.height)
+}
+
+fn constrain(
+    window: &WebviewWindow,
+    saved: &mut WindowState,
+    prefer_saved_monitor: bool,
+) -> Result<bool, String> {
+    let monitors = window.available_monitors().map_err(err)?;
+    let selected = if prefer_saved_monitor {
+        monitors
+            .iter()
+            .find(|m| m.name() == saved.monitor.as_ref())
+            .cloned()
+    } else {
+        window.current_monitor().map_err(err)?
+    };
+    let Some(monitor) = selected
+        .or(window.primary_monitor().map_err(err)?)
+        .or_else(|| monitors.first().cloned())
+    else {
+        return Ok(false);
+    };
+    let area = monitor.work_area();
+    let scale = monitor.scale_factor();
+    let old_size = (saved.width, saved.height);
+    saved.width = (if saved.locked {
+        saved.width
+    } else {
+        saved.width.max(360.0)
+    })
+    .min(area.size.width as f64 / scale);
+    saved.height = (if saved.locked {
+        saved.height
+    } else {
+        saved.height.max(420.0)
+    })
+    .min(area.size.height as f64 / scale);
+    let width = (saved.width * scale).round() as i32;
+    let height = (saved.height * scale).round() as i32;
+    let left = area.position.x;
+    let top = area.position.y;
+    let right = left + area.size.width as i32;
+    let bottom = top + area.size.height as i32;
+    saved.x = Some(
+        saved
+            .x
+            .unwrap_or(left + 32)
+            .clamp(left, (right - width).max(left)),
+    );
+    saved.y = Some(
+        saved
+            .y
+            .unwrap_or(top + 32)
+            .clamp(top, (bottom - height).max(top)),
+    );
+    saved.monitor = monitor.name().cloned();
+    Ok((old_size.0 - saved.width).abs() > 1.0 || (old_size.1 - saved.height).abs() > 1.0)
+}
+
+pub fn restore(window: &WebviewWindow) -> Result<(), String> {
+    let shared = window.state::<Shared>();
+    let mut saved = shared
+        .lock()
+        .map_err(|_| "Window state is unavailable")?
+        .saved
+        .window
+        .clone();
+    let recovered = constrain(window, &mut saved, true)?;
+    // Position first so client/outer conversion uses the destination monitor DPI.
+    window
+        .set_position(PhysicalPosition::new(
+            saved.x.unwrap_or(0),
+            saved.y.unwrap_or(0),
+        ))
+        .map_err(err)?;
+    window.set_always_on_top(saved.pinned).map_err(err)?;
+    apply_lock(window, &saved)?;
+    let mut store = shared.lock().map_err(|_| "Window state is unavailable")?;
+    store.saved.window = saved;
+    store.dirty = true;
+    if recovered {
+        store.warning = Some("The reader was resized to fit the available display. Your size-lock setting was preserved.".into());
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn set_pin(
+    enabled: bool,
+    window: WebviewWindow,
+    state: State<'_, Shared>,
+) -> Result<WindowState, String> {
+    window.set_always_on_top(enabled).map_err(err)?;
+    let mut store = state.lock().map_err(|_| "Window state is unavailable")?;
+    store.saved.window.pinned = enabled;
+    let _ = window.emit("window-state", store.saved.window.clone());
+    store.persist()?;
+    Ok(store.saved.window.clone())
+}
+
+#[tauri::command]
+pub fn set_lock(
+    enabled: bool,
+    window: WebviewWindow,
+    state: State<'_, Shared>,
+) -> Result<WindowState, String> {
+    // Restoring a maximized window first prevents locking an OS maximize state.
+    if window.is_maximized().map_err(err)? {
+        window.unmaximize().map_err(err)?;
+    }
+    let scale = window.scale_factor().map_err(err)?;
+    let size = window.outer_size().map_err(err)?.to_logical::<f64>(scale);
+    let mut saved = state
+        .lock()
+        .map_err(|_| "Window state is unavailable")?
+        .saved
+        .window
+        .clone();
+    saved.width = size.width;
+    saved.height = size.height;
+    saved.locked = enabled;
+    {
+        let mut store = state.lock().map_err(|_| "Window state is unavailable")?;
+        store.saved.window = saved.clone();
+    }
+    apply_lock(&window, &saved)?;
+    let _ = window.emit("window-state", saved.clone());
+    state
+        .lock()
+        .map_err(|_| "Window state is unavailable")?
+        .persist()?;
+    Ok(saved)
+}
+
+#[tauri::command]
+pub fn set_preset(
+    preset: String,
+    window: WebviewWindow,
+    state: State<'_, Shared>,
+) -> Result<WindowState, String> {
+    let mut saved = state
+        .lock()
+        .map_err(|_| "Window state is unavailable")?
+        .saved
+        .window
+        .clone();
+    if saved.locked {
+        return Err("Size is locked. Unlock size before choosing a window preset.".into());
+    }
+    (saved.width, saved.height) = match preset.as_str() {
+        "compact" => (420.0, 620.0),
+        "reading" => (760.0, 900.0),
+        _ => return Err("Unknown window preset.".into()),
+    };
+    constrain(&window, &mut saved, false)?;
+    if window.is_maximized().map_err(err)? {
+        window.unmaximize().map_err(err)?;
+    }
+    apply_lock(&window, &saved)?;
+    window
+        .set_position(PhysicalPosition::new(
+            saved.x.unwrap_or(0),
+            saved.y.unwrap_or(0),
+        ))
+        .map_err(err)?;
+    let mut store = state.lock().map_err(|_| "Window state is unavailable")?;
+    store.saved.window = saved.clone();
+    store.persist()?;
+    Ok(saved)
+}
+
+pub fn handle_event(window: &Window, event: &WindowEvent) {
+    if window.label() != "main" {
+        return;
+    }
+    if !matches!(
+        event,
+        WindowEvent::Moved(_) | WindowEvent::Resized(_) | WindowEvent::ScaleFactorChanged { .. }
+    ) {
+        return;
+    }
+    let Some(shared) = window.try_state::<Shared>() else {
+        return;
+    };
+    let Some(webview) = window.app_handle().get_webview_window("main") else {
+        return;
+    };
+    let Ok(mut saved) = shared.lock().map(|store| store.saved.window.clone()) else {
+        return;
+    };
+    if window.is_minimized().unwrap_or(false) {
+        return;
+    }
+    let Ok(scale) = window.scale_factor() else {
+        return;
+    };
+    let Ok(outer) = window.outer_size() else {
+        return;
+    };
+    if outer.width == 0 || outer.height == 0 {
+        return;
+    }
+    if let Ok(position) = window.outer_position() {
+        saved.x = Some(position.x);
+        saved.y = Some(position.y);
+    }
+    let mut recovered = false;
+    if saved.locked {
+        recovered = constrain(&webview, &mut saved, false).unwrap_or(false);
+        let observed = outer.to_logical::<f64>(scale);
+        if (observed.width - saved.width).abs() > 1.0
+            || (observed.height - saved.height).abs() > 1.0
+        {
+            if window.is_maximized().unwrap_or(false) {
+                let _ = window.unmaximize();
+            }
+            // Enforce after OS-initiated resize routes, including snap and DPI changes.
+            // Windows acceptance still requires measuring all Win+Arrow routes.
+            let _ = apply_lock(&webview, &saved);
+        }
+        if recovered {
+            let _ = window.set_position(PhysicalPosition::new(
+                saved.x.unwrap_or(0),
+                saved.y.unwrap_or(0),
+            ));
+        }
+    } else if !window.is_maximized().unwrap_or(false) {
+        let observed = outer.to_logical::<f64>(scale);
+        saved.width = observed.width;
+        saved.height = observed.height;
+        if let Ok(Some(monitor)) = window.current_monitor() {
+            saved.monitor = monitor.name().cloned();
+        }
+    }
+    let mut warning = None;
+    if let Ok(mut store) = shared.lock() {
+        store.saved.window = saved.clone();
+        store.dirty = true;
+        if recovered {
+            warning = Some(
+                "The reader was resized to fit the available display. Size remains locked."
+                    .to_string(),
+            );
+            store.warning = warning.clone();
+        }
+    }
+    let _ = window.emit("window-state", saved);
+    if let Some(warning) = warning {
+        let _ = window.emit("reader-warning", warning);
+    }
+}

@@ -1,0 +1,42 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Float Reader",
+  "version": "0.1.0",
+  "identifier": "io.github.rvynp.floatreader",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://127.0.0.1:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "windows": [{
+      "label": "main",
+      "title": "Float Reader",
+      "theme": "Light",
+      "width": 420,
+      "height": 620,
+      "visible": false,
+      "dragDropEnabled": true,
+      "resizable": true
+    }],
+    "security": {
+      "capabilities": ["main"],
+      "csp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; font-src 'self' blob: data:; connect-src 'self' ipc: http://ipc.localhost; worker-src 'self' blob:; frame-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'",
+      "devCsp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; font-src 'self' blob: data:; connect-src 'self' ipc: http://ipc.localhost ws://127.0.0.1:1420; worker-src 'self' blob:; frame-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "icon": [],
+    "fileAssociations": [{
+      "ext": ["pdf", "epub", "md", "markdown", "txt"],
+      "name": "Reading document",
+      "description": "Open this document in Float Reader",
+      "role": "Viewer"
+    }],
+    "windows": { "nsis": { "installMode": "currentUser" } }
+  }
+}
