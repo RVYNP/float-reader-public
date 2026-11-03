@@ -38,7 +38,8 @@ jobs:
           Get-CimInstance Win32_Process | Where-Object { $_.Name -match 'webview|float' } | Select-Object ProcessId,ParentProcessId,Name,@{n='Cmd';e={$_.CommandLine.Substring(0, [Math]::Min(300, $_.CommandLine.Length))}} | Format-List | Out-String -Width 400
           netstat -ano | Select-String ':19126'
           try { (Invoke-WebRequest 'http://127.0.0.1:19126/json/version' -UseBasicParsing -TimeoutSec 5).Content } catch { "CDP request failed: $_" }
-          Get-ChildItem "$env:LOCALAPPDATA\io.github.rvynp.floatreader" -ErrorAction SilentlyContinue | Select-Object Name,Length | Out-String
+          Get-CimInstance Win32_Process -Filter "Name='msedgewebview2.exe'" | Where-Object { $_.CommandLine -notmatch '--type=' } | ForEach-Object { "BROWSER CMD: $($_.CommandLine)" }
+          Get-CimInstance Win32_Process -Filter "Name='msedgewebview2.exe'" | Where-Object { $_.CommandLine -notmatch '--type=' } | ForEach-Object { ($_.CommandLine -split ' --') -join "`n  --" }
           Add-Type -AssemblyName System.Windows.Forms, System.Drawing
           $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
           $bitmap = New-Object System.Drawing.Bitmap $bounds.Width, $bounds.Height
