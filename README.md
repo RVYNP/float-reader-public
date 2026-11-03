@@ -177,6 +177,10 @@ confirm once:
   - On macOS 14 or earlier, Control-click (or right-click) the app, choose **Open**, then **Open**
     again.
 
+**Let an AI assistant do it.** If you use an AI coding assistant, give it the
+[agent setup instructions](docs/agent-setup.md). It will pick the right download, check it, install
+it, and tell you what it did.
+
 ### Build it yourself
 
 Developers can build from source with Node.js and Rust; the
