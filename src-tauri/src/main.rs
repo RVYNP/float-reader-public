@@ -16,7 +16,7 @@ use std::{
     sync::{Mutex, Arc},
     time::Duration,
 };
-use tauri::{AppHandle, Emitter, Manager, State};
+use tauri::{window::Color, AppHandle, Emitter, Manager, State};
 
 type Shared = Arc<Mutex<Store>>;
 const MAX_DOCUMENT: u64 = 300 * 1024 * 1024;
@@ -690,6 +690,13 @@ fn main() {
                 .get_webview_window("main")
                 .ok_or("Main window is missing")?;
             windows::restore(&window)?;
+            // Paint the default theme's chrome before the page loads so a dark system never
+            // flashes white; the page then applies the saved appearance (src/theme.ts).
+            let chrome = match window.theme() {
+                Ok(tauri::Theme::Dark) => Color(0x17, 0x16, 0x1c, 255),
+                _ => Color(0xe4, 0xe2, 0xe9, 255),
+            };
+            window.set_background_color(Some(chrome))?;
             window.show()?;
             if let Some(path) = argument_file(
                 std::env::args(),
