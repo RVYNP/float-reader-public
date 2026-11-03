@@ -38,3 +38,5 @@ gh workflow run release.yml --ref <branch> -f dry_run=true
 ```
 
 A dry run builds everything and keeps it as the `Float-Reader-<version>-release` workflow artifact (files, `SHA256SUMS.txt`, `RELEASE_NOTES.md`) for 14 days. It creates no release. `dry_run=false` is only accepted when the ref is a `v*` tag.
+
+GitHub only offers `workflow_dispatch` once the workflow is on the default branch. Until then, and whenever a pull request changes `release.yml` or `release-notes.md`, the pull request runs the same dry run automatically.
