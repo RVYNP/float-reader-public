@@ -43,4 +43,7 @@ export default defineConfig({
   },
   webServer: { command: 'npm run dev -- --port 1421', url: 'http://127.0.0.1:1421', reuseExistingServer: true },
   timeout: 30000,
+  // The first document open on a cold dev server transforms pdfjs-dist/foliate on demand;
+  // on a CI runner that alone took longer than the 5 s default and failed the first PDF test.
+  expect: { timeout: 15000 },
 });
