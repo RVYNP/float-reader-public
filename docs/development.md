@@ -66,6 +66,12 @@ task-specific target directory first:
 $env:CARGO_TARGET_DIR = Join-Path $env:TEMP 'float-reader-target'
 ```
 
+## Release
+
+Tagged releases are built by `.github/workflows/release.yml`, which creates a draft GitHub Release
+with the Windows installer, a portable zip, the macOS `.dmg` and checksums. See
+[releasing](releasing.md).
+
 ## Test
 
 ```bash
