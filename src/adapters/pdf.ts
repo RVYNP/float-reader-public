@@ -97,14 +97,7 @@ export class PdfAdapter implements ReaderAdapter {
     try {
       page = await doc.getPage(target);
       if (generation !== this.generation || this.disposed) return;
-      const rotation = ((page.rotate + this.options.rotation) % 360 + 360) % 360;
-      const base = page.getViewport({ scale: 1, rotation });
-      const width = Math.max(100, this.host.clientWidth - 32), height = Math.max(100, this.host.clientHeight - 32);
-      const fit = this.options.fit === 'width' ? width / base.width : Math.min(width / base.width, height / base.height);
-      const scale = fit * clamp(this.options.zoom, .25, 5);
-      const viewport = page.getViewport({ scale, rotation });
-      // Cap the backing store by device pixels actually displayed, not by a flat 2x.
-      const dpr = Math.min(devicePixelRatio || 1, 2, Math.sqrt(16_000_000 / (viewport.width * viewport.height)));
+      const { viewport, scale, dpr, pixelsWidth, pixelsHeight, key } = this.layout(page, target);
       const surface = document.createElement('div'); surface.className = 'pdf-page';
       surface.style.width = `${viewport.width}px`; surface.style.height = `${viewport.height}px`;
       surface.style.setProperty('--scale-factor', String(scale));
@@ -112,23 +105,23 @@ export class PdfAdapter implements ReaderAdapter {
       // A cached bitmap for a neighbouring page paints in the same frame as the turn:
       // no decode, no rasterization, just a blit into the new canvas.
       const canvas = document.createElement('canvas'); canvas.setAttribute('aria-hidden', 'true');
-      const pixelsWidth = Math.ceil(viewport.width * dpr), pixelsHeight = Math.ceil(viewport.height * dpr);
-      const cached = this.pageCache.get(`${target}:${pixelsWidth}x${pixelsHeight}`);
+      const cached = this.pageCache.get(key);
       canvas.width = pixelsWidth; canvas.height = pixelsHeight;
       canvas.style.width = `${viewport.width}px`; canvas.style.height = `${viewport.height}px`;
-      if (cached && cached.width === pixelsWidth && cached.height === pixelsHeight) canvas.getContext('2d')?.drawImage(cached, 0, 0);
+      if (cached) canvas.getContext('2d')?.drawImage(cached, 0, 0);
       surface.append(canvas);
-      const task = cached && cached.width === pixelsWidth ? undefined
+      const task = cached ? undefined
         : this.task = page.render({ canvas, viewport, transform: dpr === 1 ? undefined : [dpr, 0, 0, dpr, 0, 0] });
       void task?.promise.catch(() => {}); // Cancellation can occur while text extraction is still pending.
       // Show the page as soon as it has pixels. The text layer and links are layered on
       // afterwards: waiting for them would delay first content by a full frame budget.
       this.commit(surface, target, page, viewport, y, x, atEnd);
-      if (task) this.cachePage(target, canvas);
       const text = await page.getTextContent();
       if (generation !== this.generation || this.disposed) { task?.cancel(); return; }
       if (task) await task.promise;
       if (generation !== this.generation || this.disposed) return;
+      // Only a completed raster may be reused: a cancelled task leaves a partially painted canvas.
+      if (task) this.cachePage(key, canvas);
       const textContainer = document.createElement('div'); textContainer.className = 'textLayer';
       surface.append(textContainer);
       const layer = this.layer = new TextLayer({ textContentSource: text, container: textContainer, viewport });
@@ -159,6 +152,21 @@ export class PdfAdapter implements ReaderAdapter {
       throw error;
     }
   }
+  /** Geometry and cache identity for one page at the current options and host size. */
+  private layout(page: PDFPageProxy, number: number) {
+    const rotation = ((page.rotate + this.options.rotation) % 360 + 360) % 360;
+    const base = page.getViewport({ scale: 1, rotation });
+    const width = Math.max(100, this.host.clientWidth - 32), height = Math.max(100, this.host.clientHeight - 32);
+    const fit = this.options.fit === 'width' ? width / base.width : Math.min(width / base.width, height / base.height);
+    const scale = fit * clamp(this.options.zoom, .25, 5);
+    const viewport = page.getViewport({ scale, rotation });
+    // Cap the backing store by device pixels actually displayed, not by a flat 2x.
+    const dpr = Math.min(devicePixelRatio || 1, 2, Math.sqrt(16_000_000 / (viewport.width * viewport.height)));
+    const pixelsWidth = Math.ceil(viewport.width * dpr), pixelsHeight = Math.ceil(viewport.height * dpr);
+    // Rotation is part of the identity: 0° and 180° share pixel dimensions but not pixels.
+    return { viewport, scale, dpr, pixelsWidth, pixelsHeight, key: `${number}:${rotation}:${pixelsWidth}x${pixelsHeight}` };
+  }
+
   /** Puts a rendered page on screen and records the position it represents. */
   private commit(surface: HTMLElement, target: number, page: PDFPageProxy, viewport: { width: number; height: number }, y: number, x: number, atEnd: boolean) {
     const previous = this.currentPage;
@@ -172,8 +180,7 @@ export class PdfAdapter implements ReaderAdapter {
   }
 
   /** Keeps a bounded set of rendered bitmaps so the next/previous turn can blit instead of rasterize. */
-  private cachePage(number: number, canvas: HTMLCanvasElement) {
-    const key = `${number}:${canvas.width}x${canvas.height}`;
+  private cachePage(key: string, canvas: HTMLCanvasElement) {
     this.pageCache.delete(key);
     // A single displayed page at 2x is a few MB; the bound keeps the whole adapter well under
     // any per-document memory budget while still covering the pages a reader turns between.
@@ -203,20 +210,15 @@ export class PdfAdapter implements ReaderAdapter {
       try {
         for (const number of [current + 1, current - 1]) {
           if (number < 1 || number > doc.numPages || controller.signal.aborted || this.disposed) continue;
-          if (Array.from(this.pageCache.keys()).some(key => key.startsWith(`${number}:`))) continue;
           const page = await doc.getPage(number);
           if (controller.signal.aborted || this.disposed) return;
-          const rotation = ((page.rotate + this.options.rotation) % 360 + 360) % 360;
-          const base = page.getViewport({ scale: 1, rotation });
-          const width = Math.max(100, this.host.clientWidth - 32), height = Math.max(100, this.host.clientHeight - 32);
-          const fit = this.options.fit === 'width' ? width / base.width : Math.min(width / base.width, height / base.height);
-          const viewport = page.getViewport({ scale: fit * clamp(this.options.zoom, .25, 5), rotation });
-          const dpr = Math.min(devicePixelRatio || 1, 2, Math.sqrt(16_000_000 / (viewport.width * viewport.height)));
+          const { viewport, dpr, pixelsWidth, pixelsHeight, key } = this.layout(page, number);
+          if (this.pageCache.has(key)) continue;
           const canvas = document.createElement('canvas');
-          canvas.width = Math.ceil(viewport.width * dpr); canvas.height = Math.ceil(viewport.height * dpr);
+          canvas.width = pixelsWidth; canvas.height = pixelsHeight;
           await page.render({ canvas, viewport, transform: dpr === 1 ? undefined : [dpr, 0, 0, dpr, 0, 0] }).promise;
           if (controller.signal.aborted || this.disposed) return;
-          this.cachePage(number, canvas);
+          this.cachePage(key, canvas);
         }
       } catch { /* Prefetch is an optimization; a failure must never surface to the reader. */ }
       finally { if (this.prefetchAbort === controller) this.prefetching = false; }

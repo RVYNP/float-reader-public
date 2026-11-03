@@ -3,8 +3,8 @@ use tauri::{
     Emitter, LogicalSize, Manager, PhysicalPosition, State, WebviewWindow, Window, WindowEvent,
 };
 
-/// Smallest OUTER logical size the reader is allowed to shrink to, matching the
-/// configured window minimum in tauri.conf.json.
+/// Smallest OUTER logical size the reader is allowed to shrink to: the PRD's
+/// minimum usable window, which describes the outer window on every platform.
 const MIN_OUTER_WIDTH: f64 = 360.0;
 const MIN_OUTER_HEIGHT: f64 = 420.0;
 
@@ -79,12 +79,6 @@ fn outer_logical(
     }
 }
 
-/// Smallest OUTER size the reader may shrink to, paired with `content_size` so
-/// a clamped outer size never contradicts the content minimum it enforces.
-fn minimum_outer(border: (f64, f64)) -> (f64, f64) {
-    (MIN_OUTER_WIDTH + border.0, MIN_OUTER_HEIGHT + border.1)
-}
-
 fn set_outer(window: &WebviewWindow, width: f64, height: f64) -> Result<(), String> {
     let border = frame(window)?;
     let (width, height) = content_size(width, height, border);
@@ -116,8 +110,11 @@ fn apply_lock(window: &WebviewWindow, target: &WindowState) -> Result<(), String
             })
             .unwrap_or((360.0, 420.0));
         // The minimum is an outer size, like every other dimension here.
-        let (min_width, min_height) = minimum_outer((border_x, border_y));
-        let (width, height) = content_size(min_width.min(max_w), min_height.min(max_h), (border_x, border_y));
+        let (width, height) = content_size(
+            MIN_OUTER_WIDTH.min(max_w),
+            MIN_OUTER_HEIGHT.min(max_h),
+            (border_x, border_y),
+        );
         window
             .set_min_size(Some(LogicalSize::new(width, height)))
             .map_err(err)?;
@@ -148,16 +145,15 @@ fn constrain(
     let area = monitor.work_area();
     let scale = monitor.scale_factor();
     let old_size = (saved.width, saved.height);
-    // A locked window keeps its size and may overhang a smaller display; an
-    // unlocked one is clamped into the work area without dropping below the
-    // minimum, which is expressed as an outer size like everything else here.
+    // Saved sizes are outer. An unlocked window never drops below the minimum; a
+    // locked one keeps its size unless the work area is now smaller, where it
+    // shrinks only as far as needed (PRD WIN-07).
     if !saved.locked {
-        let (min_width, min_height) = minimum_outer(frame(window)?);
-        let max_width = area.size.width as f64 / scale;
-        let max_height = area.size.height as f64 / scale;
-        saved.width = saved.width.max(min_width).min(max_width);
-        saved.height = saved.height.max(min_height).min(max_height);
+        saved.width = saved.width.max(MIN_OUTER_WIDTH);
+        saved.height = saved.height.max(MIN_OUTER_HEIGHT);
     }
+    saved.width = saved.width.min(area.size.width as f64 / scale);
+    saved.height = saved.height.min(area.size.height as f64 / scale);
     let width = (saved.width * scale).round() as i32;
     let height = (saved.height * scale).round() as i32;
     let left = area.position.x;
@@ -384,10 +380,7 @@ pub fn handle_event(window: &Window, event: &WindowEvent) {
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        content_size, minimum_outer, outer_logical, LogicalSize, MACOS_TITLEBAR, MIN_OUTER_HEIGHT,
-        MIN_OUTER_WIDTH,
-    };
+    use super::{content_size, outer_logical, LogicalSize, MACOS_TITLEBAR};
 
     /// The presets and every persisted size are OUTER logical pixels, while
     /// `set_size` and the size constraints take content dimensions. After the
@@ -403,17 +396,12 @@ mod tests {
         // the resulting outer frame is exactly what the user asked for.
         let (w, h) = content_size(420.0, 620.0, mac);
         assert_eq!((w + mac.0, h + mac.1), (420.0, 620.0));
-        assert_eq!(minimum_outer(mac), (360.0, 420.0 + 32.0));
 
         // Windows: decorations surround the client area on every side.
         let win = (16.0, 39.0);
         assert_eq!(content_size(420.0, 620.0, win), (404.0, 581.0));
         let (w, h) = content_size(420.0, 620.0, win);
         assert_eq!((w + win.0, h + win.1), (420.0, 620.0));
-        assert_eq!(
-            minimum_outer(win),
-            (MIN_OUTER_WIDTH + 16.0, MIN_OUTER_HEIGHT + 39.0)
-        );
     }
 
     /// What `handle_event` persists must be an OUTER size even when the session

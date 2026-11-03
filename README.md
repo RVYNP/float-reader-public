@@ -51,7 +51,7 @@ Keep `WebView2Loader.dll` beside the `.exe`. The executable embeds the reader in
 no development server.
 
 Each platform narrows its own bundle targets, so neither inherits the other's installers:
-`tauri.windows.conf.json` pins `["nsis"]` (unchanged from before the macOS work) and
+`tauri.windows.conf.json` pins `["nsis"]` (as before the macOS work) and
 `tauri.macos.conf.json` pins `["app", "dmg"]`. The base `tauri.conf.json` stays neutral with
 `"all"`.
 
@@ -69,8 +69,8 @@ $env:CARGO_TARGET_DIR = Join-Path $env:TEMP 'float-reader-target'
 
 ```bash
 npm test                                          # 58 frontend unit tests
-npm run test:e2e                                  # 6 Playwright browser scenarios
-cargo test --manifest-path src-tauri/Cargo.toml   # 23 native tests
+npm run test:e2e                                  # 7 Playwright browser scenarios
+cargo test --manifest-path src-tauri/Cargo.toml   # 23 native tests (22 on Windows: one is Unix-only)
 npm run test:layout                               # text anchor layout check
 npm run test:native                               # smoke test of the built app
 npm run perf                                      # performance report
@@ -84,22 +84,24 @@ documents; they do not use production files.
 full IPC surface. On macOS, WKWebView exposes no CDP endpoint, so it verifies launch, liveness and
 clean quit, and skips the transport assertions with an explicit reason. Quit any running instance
 first: `tauri-plugin-single-instance` makes a second launch hand off and exit immediately, which
-cannot be distinguished from a failure.
+cannot be distinguished from a failure. Run it from a non-elevated shell: WebView2 Runtime 150+
+ignores the debugging switch for elevated processes, so the port never opens (CI, whose runners are
+elevated, sets the equivalent HKLM WebView2 policy instead).
 
-> **Windows build status.** The Windows path is preserved intentionally and has not been
-> regressed: `build-native.ps1` is byte-identical to before the macOS work, the Windows window-frame
-> code is verbatim, `capabilities/` and the catalog/state/indexing modules are untouched, and NSIS
-> targeting is pinned back to exactly `["nsis"]`. The macOS work added only `cfg`-gated branches.
-> However, the Windows binary was not rebuilt or re-tested during the macOS port because no Windows
-> machine or cross-compilation toolchain was available — treat a Windows rebuild as the first step
-> before the next Windows release.
+> **Windows build status.** After the macOS port, the Windows build was rebuilt and re-tested on
+> Windows 11 x64 with WebView2: `build-native.ps1` (GNU toolchain) produces the portable executable,
+> `npm run package` produces the NSIS installer, and `npm run test:native` passes against the real
+> WebView2 app. Measured on that build, the unlocked minimum is 360×420 outer logical pixels and a
+> locked window's minimum equals its maximum equals the captured outer size. CI builds the NSIS
+> installer and runs the same native smoke test on `windows-latest`.
 
 ## Reading
 
 Open a PDF, DRM-free EPUB, Markdown, TXT or image file (PNG, JPEG, WebP, GIF, AVIF, BMP) with
-**Open**, Ctrl+O, a single-file drop or a command-line file argument. The Windows installer offers
-file associations for the document formats; clean-account installer behavior has not yet been
-verified. A second instance routes its file request to the running app.
+**Open**, Ctrl+O, a single-file drop or a command-line file argument. The Windows installer adds
+Float Reader to Explorer's **Open with** list for the document formats without changing the default
+app; clean-account installer behavior has not yet been verified. A second instance routes its file
+request to the running app.
 
 Pin keeps the reader above ordinary windows. Lock captures its outer dimensions while allowing
 movement. Ctrl+Shift+T toggles pin; Ctrl+Shift+L toggles lock. The menu includes both controls,

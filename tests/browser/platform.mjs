@@ -22,6 +22,7 @@
 //    test must degrade to process/window/lifecycle checks on macOS and keep the
 //    full CDP assertions on Windows.
 
+import { chromium } from '@playwright/test';
 import { existsSync, readdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { homedir, platform } from 'node:os';
@@ -314,6 +315,30 @@ export function appPageUrlMatches(url) {
 /** Whether this platform can be driven over CDP at all (WebView2 only). */
 export function supportsCdp() {
   return isWindows;
+}
+
+/**
+ * Attach to a launched app's WebView2 over CDP and return its reader page.
+ * Waits on a deadline because a first WebView2 start on a fresh profile is slow.
+ * An elevated host never opens the port: WebView2 Runtime 150+ ignores
+ * WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS for elevated processes (tauri-apps/wry#1782);
+ * CI opens it through HKLM policy instead (see .github/workflows/ci.yml).
+ */
+export async function connectAppPage({ child, port, stderrTail }, timeoutMs = 30_000) {
+  const deadline = Date.now() + timeoutMs;
+  const pause = ms => new Promise(done => setTimeout(done, ms));
+  let browser;
+  while (!browser) {
+    if (child.exitCode !== null) throw Error(`App exited ${child.exitCode} before its WebView accepted CDP: ${stderrTail()}`);
+    if (Date.now() > deadline) throw Error(`App is running but its WebView did not open CDP port ${port} within ${timeoutMs / 1000} s. On an elevated host, WebView2 150+ ignores WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS; run de-elevated or set the HKLM policy used in CI. ${stderrTail()}`);
+    try { browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`); } catch { await pause(250); }
+  }
+  for (;;) {
+    const page = browser.contexts()[0]?.pages().find(candidate => appPageUrlMatches(candidate.url()));
+    if (page) return { browser, page };
+    if (Date.now() > deadline) { await browser.close(); throw Error('Native reader page did not load.'); }
+    await pause(100);
+  }
 }
 
 export function cdpUnsupportedReason() {
