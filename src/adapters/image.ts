@@ -92,6 +92,7 @@ export class ImageAdapter implements ReaderAdapter {
     this.context.onPosition(this.getPosition());
   }
   outline() { return []; }
+  scroller() { return this.host; }
   destroy() {
     this.destroyed = true; this.observer?.disconnect();
     this.host?.removeEventListener('scroll', this.onScroll); this.host?.classList.remove('image-reader');
