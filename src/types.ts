@@ -15,6 +15,8 @@ export type ReaderContext = {
   openExternal: (url: string) => Promise<void>;
   requestPassword: () => Promise<string | null>;
   resolveImage?: (relative: string) => Promise<string>;
+  /** A same-origin content frame finished loading. Pointer input inside it never reaches the host, so the hand tool listens there directly. */
+  onFrame?: (doc: Document) => void;
 };
 export interface ReaderAdapter {
   readonly mode: 'fixed' | 'paginated' | 'scroll';
@@ -25,5 +27,7 @@ export interface ReaderAdapter {
   restore(locator: Locator): Promise<void>;
   setOptions(options: ReaderOptions): Promise<void>;
   outline(): OutlineItem[];
+  /** The element that scrolls page-based content, for the view controls and hand tool; absent when content reflows instead of zooming. */
+  scroller?(): HTMLElement | undefined;
   destroy(): void;
 }

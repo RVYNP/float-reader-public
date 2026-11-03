@@ -272,6 +272,7 @@ export class PdfAdapter implements ReaderAdapter {
   async restore(locator: Locator) { if (locator.kind === 'pdf') await this.render(Number(locator.page) || 1, Number(locator.y) || 0, Number(locator.x) || 0, locator.end === true); }
   async setOptions(options: ReaderOptions) { const old = this.getPosition().locator; this.options = { ...options }; await this.restore(old); }
   outline() { return this.items; }
+  scroller() { return this.host; }
   destroy() {
     this.disposed = true; ++this.generation; this.task?.cancel(); this.layer?.cancel(); this.observer?.disconnect(); clearTimeout(this.resizeTimer);
     this.host?.removeEventListener('scroll', this.onScroll); this.host?.classList.remove('pdf-reader');

@@ -199,6 +199,7 @@ export class EpubAdapter implements ReaderAdapter {
       // The postinstall patch applies this before src is assigned; assert defense too.
       const frame = doc.defaultView?.frameElement;
       if (!frame || frame.getAttribute('sandbox') !== 'allow-same-origin') throw new Error('Unsafe EPUB frame sandbox. Reinstall the application.');
+      if (this.mode === 'fixed') context.onFrame?.(doc);
       doc.addEventListener('keydown', event => {
         const target = event.target as Element;
         if (target.closest('input,textarea,select,[contenteditable="true"]')) return;
@@ -338,6 +339,8 @@ export class EpubAdapter implements ReaderAdapter {
     });
   }
   outline() { return this.items; }
+  /** Fixed-layout pages scroll inside Foliate's renderer when zoomed; reflowable chapters paginate and never pan. */
+  scroller() { return this.mode === 'fixed' ? this.view?.renderer : undefined; }
   destroy() {
     this.disposed = true; this.abort.abort(); this.unsubscribe?.();
     try { this.view?.close(); } catch { /* An opening cancellation may precede Foliate's first page. */ }
