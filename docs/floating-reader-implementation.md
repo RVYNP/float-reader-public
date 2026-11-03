@@ -22,6 +22,7 @@ not claimed as achieved, because idle CPU, cold launch and stress corpora remain
 - Markdown tables, task display, strikeout, fenced code and outline. Raw HTML is disabled. Relative images are authorized by the native backend; network/out-of-scope images become placeholders.
 - Strict UTF-8 and BOM-marked UTF-16 decoding, text wrapping, source-line jumps, typography and semantic text anchors.
 - Format-specific position footer, bounded Back stack, save debounce/continuous-save interval, atomic native state replacement, unreadable-state backup and explicit save failure UI.
+- Floating view controls for PDF, image and fixed-layout EPUB (zoom −/level/+, fit-page/fit-width toggle, Hand tool; reserved page-layout slot) sharing state with the zoom/fit shortcuts. Hand tool (H, aria-pressed) and middle-button drag pan the scroll container 1:1 with link clicks preserved, including inside sandboxed fixed-layout EPUB frames; zoomed fixed-layout pages no longer lose their left/top edge to unreachable flex overflow.
 
 ## October 23 PDF resize-loop correction
 

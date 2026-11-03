@@ -202,3 +202,100 @@ test('fixed-layout EPUB keeps physical single pages and supports next/fit', asyn
   await page.keyboard.press('Control+2');
   expect(errors).toEqual([]);
 });
+
+test('PDF view controls zoom, pan 1:1 by hand tool and middle button, and keep links clickable', async ({ page }) => {
+  const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
+  await page.goto('/');
+  await page.locator('#file-input').setInputFiles({ name: 'hand.pdf', mimeType: 'application/pdf', buffer: pdfFixture() });
+  await expect(page.locator('.textLayer')).toContainText('First page with selectable text');
+  const host = page.locator('.pdf-reader'), hand = page.getByRole('button', { name: 'Hand tool' });
+  const scroll = () => host.evaluate(el => [el.scrollLeft, el.scrollTop]);
+  await expect(page.locator('#view-controls')).toBeVisible();
+  await expect(page.locator('#zoom-level')).toHaveText('Fit');
+  await expect(hand).toHaveAttribute('aria-disabled', 'true');
+  await expect(hand).toHaveAttribute('title', 'Zoom in to pan');
+  await host.focus(); await page.keyboard.press('h');
+  await expect(hand).toHaveAttribute('aria-pressed', 'false'); // Nothing overflows yet.
+  for (let i = 0; i < 4; i++) await page.getByRole('button', { name: 'Zoom in' }).click();
+  await page.keyboard.press('Control+Equal'); // Shortcut and pill share one zoom state.
+  await expect(page.locator('#zoom-level')).toHaveText('150%');
+  await expect(page.locator('.pdf-render-status')).toHaveCount(0);
+  await expect(hand).toHaveAttribute('aria-disabled', 'false');
+  await expect(host).toBeFocused(); // Pill clicks leave keyboard focus on the page.
+  await page.keyboard.press('h');
+  await expect(hand).toHaveAttribute('aria-pressed', 'true');
+  await expect(host).toHaveClass(/hand-tool/);
+  await expect(page.locator('#filekind')).toHaveText('PDF · 150% · Hand');
+
+  // A drag moves the page exactly with the pointer and does not select text.
+  const box = (await host.boundingBox())!;
+  const [left, top] = await scroll();
+  await page.mouse.move(box.x + 200, box.y + 300); await page.mouse.down();
+  await page.mouse.move(box.x + 160, box.y + 240, { steps: 4 }); await page.mouse.up();
+  expect(await scroll()).toEqual([left + 40, top + 60]);
+  expect(await page.evaluate(() => getSelection()?.toString())).toBe('');
+
+  // A drag that starts on a link pans without following it; a still click follows it.
+  const link = page.locator('.pdf-link');
+  await link.scrollIntoViewIfNeeded();
+  const target = (await link.boundingBox())!;
+  await page.mouse.move(target.x + 20, target.y + target.height / 2); await page.mouse.down();
+  await page.mouse.move(target.x + 50, target.y + target.height / 2 + 10, { steps: 4 }); await page.mouse.up();
+  await page.waitForTimeout(200);
+  await expect(page.locator('#position')).toContainText('Page 1 of 3');
+  await link.click();
+  await expect(page.locator('#position')).toContainText('Page 2 of 3');
+
+  // Middle-button drag pans with the hand tool off (page 1 overflows on both axes at 150%).
+  await page.keyboard.press('h');
+  await expect(hand).toHaveAttribute('aria-pressed', 'false');
+  await page.keyboard.press('Alt+ArrowLeft');
+  await expect(page.locator('#position')).toContainText('Page 1 of 3');
+  await expect(page.locator('.pdf-render-status')).toHaveCount(0);
+  await host.evaluate(el => { el.scrollLeft = 0; el.scrollTop = 0; });
+  await page.mouse.move(box.x + 200, box.y + 300); await page.mouse.down({ button: 'middle' });
+  await page.mouse.move(box.x + 170, box.y + 270, { steps: 4 }); await page.mouse.up({ button: 'middle' });
+  expect(await scroll()).toEqual([30, 30]);
+
+  // Returning to fit makes the hand tool unavailable again; a new document resets it.
+  await page.keyboard.press('h');
+  await page.locator('#zoom-level').click();
+  await expect(page.locator('#zoom-level')).toHaveText('Fit');
+  await expect(hand).toHaveAttribute('aria-disabled', 'true');
+  await expect(hand).toHaveAttribute('aria-pressed', 'false');
+  await page.locator('#zoom-level').click();
+  await expect(page.locator('#zoom-level')).toHaveText('Width');
+  await page.locator('#file-input').setInputFiles({ name: 'notes.md', mimeType: 'text/markdown', buffer: Buffer.from('# Notes\n\nPlain reflowing text.') });
+  await expect(page.locator('#filename')).toHaveText('notes.md');
+  await expect(page.locator('#view-controls')).toBeHidden();
+  expect(errors).toEqual([]);
+});
+
+test('fixed-layout EPUB pans inside its zoomed page frame and keeps frame links clickable', async ({ page }) => {
+  const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
+  await page.goto('/');
+  await page.locator('#file-input').setInputFiles({ name: 'fixed-hand.epub', mimeType: 'application/epub+zip', buffer: await epubFixture(true) });
+  await expect(page.locator('#position')).toContainText('Page 1 of 2');
+  await expect(page.locator('#view-controls')).toBeVisible();
+  await page.locator('.reader-host').focus(); await page.keyboard.press('Control+Equal');
+  const hand = page.getByRole('button', { name: 'Hand tool' });
+  await expect(hand).toHaveAttribute('aria-disabled', 'false');
+  await hand.click();
+  await expect(hand).toHaveAttribute('aria-pressed', 'true');
+  const scroll = () => page.evaluate(() => { const r = (document.querySelector('foliate-view') as HTMLElement & { renderer: HTMLElement }).renderer; return [r.scrollLeft, r.scrollTop]; });
+  const [left, top] = await scroll();
+  const box = (await page.locator('.reader-host').boundingBox())!;
+  // Raw CDP input: Playwright's page.mouse drag stalls over these script-less sandboxed frames
+  // (observed with the hand tool off as well), so the drag is dispatched below its drag-and-drop layer.
+  const cdp = await page.context().newCDPSession(page);
+  const mouse = (type: 'mouseMoved' | 'mousePressed' | 'mouseReleased', dx: number, dy: number) => cdp.send('Input.dispatchMouseEvent', { type, x: box.x + 200 + dx, y: box.y + 300 + dy, button: 'left', buttons: type === 'mouseReleased' ? 0 : 1, clickCount: 1 });
+  await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: box.x + 200, y: box.y + 300 });
+  await mouse('mousePressed', 0, 0);
+  for (let step = 1; step <= 5; step++) await mouse('mouseMoved', -6 * step, -10 * step);
+  await mouse('mouseReleased', -30, -50);
+  expect(await scroll()).toEqual([left + 30, top + 50]);
+  const frame = page.frames().find(f => f.url().startsWith('blob:'))!;
+  await frame.getByRole('link', { name: 'Jump to other chapter' }).click();
+  await expect(page.locator('#position')).toContainText('Page 2 of 2');
+  expect(errors).toEqual([]);
+});

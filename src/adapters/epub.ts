@@ -210,6 +210,9 @@ export class EpubAdapter implements ReaderAdapter {
       if (this.mode === 'paginated') this.adaptInk(doc);
     });
     await view.open(this.book);
+    // Foliate centres fixed-layout pages with plain flex centring, which pushes the left/top of a
+    // zoomed page into negative overflow that no scroll (or hand-tool pan) can reach.
+    if (this.mode === 'fixed') Object.assign(view.renderer.style, { justifyContent: 'safe center', alignItems: 'safe center' });
     this.applyOptions();
     if (this.mode === 'paginated') this.unsubscribe = onAppearanceChange(() => {
       this.applyOptions();
