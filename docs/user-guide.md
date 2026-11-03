@@ -46,6 +46,18 @@ arrows adjust one page/line (0.1% for reflowable EPUB), and Home/End select the 
 The slider is disabled until a document opens and for single-page/single-line documents. Scrubbing
 saves the resulting reading position without modifying the source file.
 
+### Zoom and the hand tool
+
+PDFs, images and fixed-layout EPUBs show a small floating view-controls pill at the bottom of the
+reading panel (bottom-right once the panel is 720 pixels wide or more). It holds zoom out, the zoom
+level (**Fit**, **Width** or a percentage; click it to switch between fit page and fit width), zoom
+in and the **Hand** tool, and stays in step with Ctrl+−/+ and Ctrl+0/2. When a zoomed page is larger
+than the panel, press **H** (or the Hand button) and drag to pan it 1:1; text selection pauses while
+the hand is on, and a click without movement still follows links. Middle-button drag pans in any
+mode. The Hand button reads "Zoom in to pan" while the page fits, and the hand turns off when a new
+document opens or the page fits again. Markdown, TXT and reflowable EPUB reflow instead of zooming,
+so they have no pill and no panning.
+
 ### Keyboard shortcuts
 
 | Action | Shortcut |
@@ -60,6 +72,7 @@ saves the resulting reading position without modifying the source file.
 | Pin / size lock | Ctrl+Shift+T / Ctrl+Shift+L |
 | Fit page / fit width | Ctrl+0 / Ctrl+2 |
 | Zoom or text size | Ctrl++ / Ctrl+− |
+| Hand tool (pan a zoomed page) | H, or drag with the middle button |
 | Close a dialog | Escape |
 
 ## Saved reading data
