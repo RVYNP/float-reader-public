@@ -319,16 +319,18 @@ export function supportsCdp() {
 
 /**
  * Attach to a launched app's WebView2 over CDP and return its reader page.
- * The first WebView2 start on a fresh profile (every CI runner) is far slower
- * than on a warm desktop, so this waits on a deadline, not an attempt count.
+ * Waits on a deadline because a first WebView2 start on a fresh profile is slow.
+ * An elevated host never opens the port: WebView2 Runtime 150+ ignores
+ * WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS for elevated processes (tauri-apps/wry#1782);
+ * CI opens it through HKLM policy instead (see .github/workflows/ci.yml).
  */
-export async function connectAppPage({ child, port, stderrTail }, timeoutMs = 60_000) {
+export async function connectAppPage({ child, port, stderrTail }, timeoutMs = 30_000) {
   const deadline = Date.now() + timeoutMs;
   const pause = ms => new Promise(done => setTimeout(done, ms));
   let browser;
   while (!browser) {
     if (child.exitCode !== null) throw Error(`App exited ${child.exitCode} before its WebView accepted CDP: ${stderrTail()}`);
-    if (Date.now() > deadline) throw Error(`App is running but its WebView did not accept CDP on port ${port} within ${timeoutMs / 1000} s: ${stderrTail()}`);
+    if (Date.now() > deadline) throw Error(`App is running but its WebView did not open CDP port ${port} within ${timeoutMs / 1000} s. On an elevated host, WebView2 150+ ignores WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS; run de-elevated or set the HKLM policy used in CI. ${stderrTail()}`);
     try { browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`); } catch { await pause(250); }
   }
   for (;;) {

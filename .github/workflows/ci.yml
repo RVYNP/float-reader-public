@@ -97,6 +97,19 @@ jobs:
       # the real release binary over CDP: embedded UI, CLI open, IPC, pin, lock, save,
       # raw-byte transport and clean close. The MSVC build links the WebView2 loader
       # statically, so the binary runs from the target directory.
+      #
+      # GitHub's Windows runners are elevated, and WebView2 Runtime 150+ ignores
+      # WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS for elevated hosts by design
+      # (tauri-apps/wry#1782, MicrosoftEdge/WebView2Feedback#5645). HKLM policy is still
+      # honoured, so the runner opens the same port through the per-executable policy.
+      - name: Open WebView2 CDP for the smoke test (runner-only policy)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $key = 'HKLM:\SOFTWARE\Policies\Microsoft\Edge\WebView2\AdditionalBrowserArguments'
+          New-Item -Path $key -Force | Out-Null
+          New-ItemProperty -Path $key -Name 'float-reader.exe' -Value '--remote-debugging-port=19126' -PropertyType String -Force | Out-Null
+
       - name: Native smoke test (WebView2)
         if: runner.os == 'Windows'
         env:
