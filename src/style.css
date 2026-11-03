@@ -195,6 +195,23 @@ footer { position: relative; display: flex; gap: 4px; align-items: center; paddi
 .image-reader { padding: 16px 16px 60px; }
 .image-frame { position: relative; margin: auto; }
 .image-frame img { position: absolute; left: 50%; top: 50%; max-width: none; object-fit: contain; }
+/* View controls: a floating pill over page-based content (PDF, images, fixed-layout EPUB). */
+#workspace { container: workspace / inline-size; }
+#view-controls { --idle: .7; position: absolute; z-index: 6; bottom: 14px; left: 50%; translate: -50% 0; display: flex; align-items: center; gap: 2px; padding: 3px; background: var(--card); border: 1px solid var(--border); border-radius: 9px; box-shadow: var(--shadow-page); }
+/* Subtle while idle: the card stays opaque so page text never shows through; only its contents fade. */
+#view-controls:hover, #view-controls:focus-within { --idle: 1; }
+#view-controls > * { opacity: var(--idle); transition: opacity .15s; }
+@container workspace (min-width: 720px) { #view-controls { left: auto; right: 16px; translate: none; } }
+#view-controls button { display: grid; place-items: center; width: 28px; height: 26px; padding: 0; border-radius: 6px; color: var(--muted); }
+#view-controls button[aria-pressed=true] { color: var(--accent-ink); }
+#view-controls > button:disabled, #view-controls > button[aria-disabled=true] { opacity: calc(var(--idle) * .45); cursor: default; background: transparent; }
+#view-controls #zoom-level { width: 44px; color: var(--fg); font: 10px/1 Consolas, 'Cascadia Mono', monospace; font-variant-numeric: tabular-nums; }
+#view-controls .view-group { display: flex; align-items: center; gap: 2px; }
+#view-controls .view-sep { width: 1px; height: 16px; background: var(--hairline); }
+/* Hand tool: drags pan the page instead of selecting text; links stay clickable. */
+.reader-host.hand-tool, .reader-host.hand-tool * { cursor: grab; -webkit-user-select: none; user-select: none; }
+.reader-host.hand-tool .pdf-link { cursor: pointer; }
+.reader-host.panning, .reader-host.panning * { cursor: grabbing !important; }
 dialog { border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--fg); padding: 18px; width: min(360px, calc(100vw - 28px)); max-height: calc(100dvh - 28px); overflow: auto; box-shadow: var(--shadow-popover); }
 dialog::backdrop { background: var(--scrim); }
 h2 { font-size: 15px; font-weight: 600; margin: 0 0 16px; }
