@@ -16,7 +16,11 @@ fn err(error: impl std::fmt::Display) -> String {
 /// `NSWindow.frameRectForContentRect` minus the content rect for a
 /// Titled|Closable|Miniaturizable|Resizable window. AppKit composes a window as
 /// a title bar above the content view, so this only reduces the content height.
-#[cfg(target_os = "macos")]
+///
+/// Declared on every target rather than only macOS: the unit tests below assert
+/// the conversion arithmetic for both platforms so it stays honest on any host,
+/// and an unconditional constant keeps `cargo test` compiling on Windows/Linux.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 const MACOS_TITLEBAR: f64 = 32.0;
 
 /// How much larger a window's outer frame is than its content area, in logical

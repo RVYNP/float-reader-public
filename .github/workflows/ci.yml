@@ -84,6 +84,11 @@ jobs:
       - name: Rust unit tests (locked)
         run: cargo test --manifest-path src-tauri/Cargo.toml --locked
 
+      # tauri::generate_context! embeds `bundle.frontendDist` ("../dist") at compile
+      # time, so any step that compiles the binary needs the frontend built first.
+      - name: Build frontend assets
+        run: npm run build
+
       - name: Release build (custom-protocol)
         run: cargo build --manifest-path src-tauri/Cargo.toml --locked --features custom-protocol --release
 
