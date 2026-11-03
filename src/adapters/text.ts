@@ -109,18 +109,18 @@ const styles = `
 .reader-text-content :is(h1,h2,h3,h4,h5,h6){line-height:1.25}
 .reader-text-content h1{font-size:2em;letter-spacing:normal;color:inherit}
 .reader-text-content h2{font-size:1.5em}.reader-text-content h3{font-size:1.25em}
-.reader-text-content a{color:var(--accent,#6358d8);text-decoration:underline}
+.reader-text-content a{color:var(--accent-ink);text-decoration:underline}
 .reader-text-content pre,.reader-table-scroll{max-width:100%;overflow:auto;overscroll-behavior:contain}
-.reader-text-content pre{padding:.7em;background:rgba(127,127,127,.1);white-space:pre;overflow-wrap:normal}
+.reader-text-content pre{padding:.7em;background:var(--code);white-space:pre;overflow-wrap:normal}
 .reader-text-content code{font-family:Consolas,monospace;font-size:.88em}
 .reader-text-content table{border-collapse:collapse;overflow-wrap:normal}
-.reader-text-content th,.reader-text-content td{border:1px solid #888;padding:.4em .6em}
-.reader-text-content blockquote{margin-left:0;border-left:3px solid #999;padding-left:1em}
+.reader-text-content th,.reader-text-content td{border:1px solid var(--rule);padding:.4em .6em}
+.reader-text-content blockquote{margin-left:0;border-left:3px solid var(--rule);padding-left:1em}
 .reader-text-content img{max-width:100%;height:auto}
-.reader-image-placeholder{display:inline-block;border:1px dashed #888;padding:.5em;font-size:.9em}
+.reader-image-placeholder{display:inline-block;border:1px dashed var(--rule);padding:.5em;font-size:.9em}
 .reader-text-chunk{white-space:pre-wrap;min-height:1lh}
 .reader-text-content[data-wrap="false"] .reader-text-chunk{white-space:pre;overflow-wrap:normal}
-.reader-text-content :focus-visible{outline:2px solid var(--accent,#6358d8);outline-offset:3px}
+.reader-text-content :focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 `;
 
 export class TextAdapter implements ReaderAdapter {
@@ -171,6 +171,7 @@ export class TextAdapter implements ReaderAdapter {
     }
     const style = document.createElement('style'); style.textContent = styles;
     host.replaceChildren(style, this.content);
+    host.classList.add('text-reader');
     host.style.overflow = 'auto';
     host.style.overflowAnchor = 'none';
     this.blocks = Array.from(this.content.querySelectorAll<HTMLElement>('[data-source-line]')).map(element => ({ element, line: Number(element.dataset.sourceLine), endLine: Number(element.dataset.sourceEnd) }));

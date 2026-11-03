@@ -2,6 +2,7 @@ import { BlobReader, ZipReader, configure, type FileEntry } from '@zip.js/zip.js
 import { EPUB } from 'foliate-js/epub.js';
 import 'foliate-js/view.js';
 import type { Locator, OutlineItem, Position, ReaderAdapter, ReaderContext, ReaderOptions, ReaderSource } from '../types';
+import { isDark, liftInk, onAppearanceChange, parseRgb, readingColors, rgbToHex, type Rgb } from '../theme';
 
 const RESOURCE_LIMIT = 64 * 1024 * 1024;
 const ARCHIVE_LIMIT = 512 * 1024 * 1024;
@@ -105,6 +106,9 @@ export class EpubAdapter implements ReaderAdapter {
   private chapter = '';
   private position: Position = { label: 'Opening EPUB…', fraction: 0, locator: { kind: 'epub' }, scrub: { current: 0, total: 100, unit: 'percent' } };
   private explicitEnd = false;
+  private unsubscribe?: () => void;
+  /** Inline colors replaced to keep publication text legible on a dark page, restored on light pages. */
+  private lifted = new WeakMap<Document, [element: HTMLElement, value: string, priority: string][]>();
 
   async open(source: ReaderSource, host: HTMLElement, context: ReaderContext, options: ReaderOptions) {
     this.host = host; this.context = context; this.options = { ...options };
@@ -153,6 +157,8 @@ export class EpubAdapter implements ReaderAdapter {
     if (!this.book.sections.length) throw new Error('The EPUB has no readable spine sections.');
     this.mode = this.book.rendition?.layout === 'pre-paginated' ? 'fixed' : 'paginated';
     this.book.rendition ??= {}; this.book.rendition.spread = 'none';
+    // Reflowable text follows the reading theme; fixed-layout pages stay faithful.
+    if (this.mode === 'paginated') host.classList.add('reflow-reader');
     this.book.transformTarget.addEventListener('data', event => {
       const detail = (event as CustomEvent).detail;
       if (['application/xhtml+xml', 'text/html', 'image/svg+xml'].includes(detail.type))
@@ -200,9 +206,14 @@ export class EpubAdapter implements ReaderAdapter {
         const forwarded = new KeyboardEvent('keydown', { key: event.key, code: event.code, ctrlKey: event.ctrlKey, altKey: event.altKey, shiftKey: event.shiftKey, metaKey: event.metaKey, bubbles: true, cancelable: true, repeat: event.repeat });
         if (!host.dispatchEvent(forwarded)) event.preventDefault();
       });
+      if (this.mode === 'paginated') this.adaptInk(doc);
     });
     await view.open(this.book);
     this.applyOptions();
+    if (this.mode === 'paginated') this.unsubscribe = onAppearanceChange(() => {
+      this.applyOptions();
+      for (const { doc } of view.renderer.getContents()) this.adaptInk(doc);
+    });
     await view.renderer.goTo({ index: 0 });
     if (this.mode === 'fixed') view.renderer.addEventListener('scroll', () => {
       if (view.renderer.scrollTop < view.renderer.scrollHeight - view.renderer.clientHeight - 2) this.explicitEnd = false;
@@ -295,8 +306,31 @@ export class EpubAdapter implements ReaderAdapter {
     else {
       renderer.setAttribute('flow', 'paginated'); renderer.setAttribute('max-column-count', '1');
       renderer.setAttribute('margin', `${options.margin}px`); renderer.setAttribute('gap', `${Math.max(2, options.margin / Math.max(1, this.host.clientWidth) * 200)}%`);
-      renderer.setStyles?.(`html, body { font-size: ${options.fontSize}px !important; line-height: ${options.lineHeight} !important; } img, svg { max-width: 100%; } a:focus-visible { outline: 2px solid #6358d8; }`);
+      // The frame's color-scheme must match the app's or Chromium paints it opaque; Foliate paints --theme-bg-color behind each column.
+      const { scheme, ink, paper, accent } = readingColors();
+      renderer.setStyles?.(`html { color-scheme: ${scheme}; color: ${rgbToHex(ink)}; --theme-bg-color: ${rgbToHex(paper)}; } html, body { font-size: ${options.fontSize}px !important; line-height: ${options.lineHeight} !important; } img, svg { max-width: 100%; } a:focus-visible { outline: 2px solid ${rgbToHex(accent)}; }`);
     }
+  }
+  /** Dark pages keep publication colors but lift text that would be illegible on them; light pages get the originals back. */
+  private adaptInk(doc: Document) {
+    for (const [element, value, priority] of this.lifted.get(doc) ?? []) element.style.setProperty('color', value, priority);
+    this.lifted.delete(doc);
+    const { paper, ink } = readingColors(), view = doc.defaultView, body = doc.body;
+    if (!view || !body || !isDark(paper)) return;
+    const changed: [HTMLElement, string, string][] = [], backgrounds = new Map<Node, Rgb>();
+    const walker = doc.createTreeWalker(body, NodeFilter.SHOW_ELEMENT, { acceptNode: node => (node as Element).namespaceURI === XHTML ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT });
+    for (let node: Node | null = body; node; node = walker.nextNode()) {
+      const element = node as HTMLElement, style = view.getComputedStyle(element);
+      // Foliate moves the body background behind the frame, where --theme-bg-color replaces it.
+      const background = (element !== body && parseRgb(style.backgroundColor)) || (element.parentNode && backgrounds.get(element.parentNode)) || paper;
+      backgrounds.set(element, background);
+      if (!Array.from(element.childNodes).some(child => child.nodeType === Node.TEXT_NODE && child.textContent?.trim())) continue;
+      const color = parseRgb(style.color), legible = color && liftInk(color, background, ink);
+      if (!legible) continue;
+      changed.push([element, element.style.getPropertyValue('color'), element.style.getPropertyPriority('color')]);
+      element.style.setProperty('color', rgbToHex(legible), 'important');
+    }
+    if (changed.length) this.lifted.set(doc, changed);
   }
   async setOptions(options: ReaderOptions) {
     return this.enqueue(async () => { const old = { ...this.position.locator }; this.options = { ...options }; this.applyOptions();
@@ -305,8 +339,9 @@ export class EpubAdapter implements ReaderAdapter {
   }
   outline() { return this.items; }
   destroy() {
-    this.disposed = true; this.abort.abort();
+    this.disposed = true; this.abort.abort(); this.unsubscribe?.();
     try { this.view?.close(); } catch { /* An opening cancellation may precede Foliate's first page. */ }
     this.view?.remove(); this.book?.destroy(); void this.archive?.close(); this.view = undefined; this.book = undefined;
+    this.host?.classList.remove('reflow-reader');
   }
 }
