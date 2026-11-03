@@ -19,6 +19,10 @@
   <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-6358d8?style=flat-square"></a>
 </p>
 
+<p align="center">
+  <a href="#download"><b>Download for Windows or Mac</b></a> · <a href="docs/user-guide.md">User guide</a>
+</p>
+
 ---
 
 ## Why it exists
@@ -50,20 +54,21 @@ computer.
   <tr>
     <td valign="top">
       <h3>Reads what you read</h3>
-      PDFs, EPUB books, Markdown notes, plain text and images, each shown the way it should be:
-      faithful pages for PDFs, comfortable reflowing text for books.
+      PDFs, EPUB books, Markdown notes, plain text and images: faithful pages for PDFs, comfortable
+      reflowing text for books. Turn pages, jump to a chapter or scrub through the whole document
+      with one slider.
     </td>
     <td valign="top">
-      <h3>Moves at the speed of a keyboard</h3>
-      Turn pages, jump to a chapter or scrub through the whole document with one slider. Every
-      control is also reachable without a mouse.
+      <h3>Opens like a book</h3>
+      Show two pages side by side, the way a printed book lies open. Zoom in on a small detail and
+      drag the page around by hand. Every control also works from the keyboard.
     </td>
   </tr>
   <tr>
     <td valign="top">
       <h3>A library for your references</h3>
       Collect documents into collections, star favorites, search, or point it at a folder of PDFs.
-      It references your files and never copies or moves them.
+      Make it wider or narrower and keep it on either side. It never copies or moves your files.
     </td>
     <td valign="top">
       <h3>Fits your space</h3>
@@ -75,10 +80,18 @@ computer.
 
 ## A closer look
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/media/spread-dark.png">
+    <img src="docs/media/spread-light.png" alt="Pages 2 and 3 of Alice's Adventures in Wonderland shown side by side as an open book" width="880">
+  </picture>
+  <br><sub><b>Two-page view</b> lays out a PDF like an open book</sub>
+</p>
+
 <table>
   <tr>
     <td align="center" width="33%"><img src="docs/media/reading-epub.png" alt="Reading an EPUB book in the compact window"><br><sub><b>Reading a book</b> at the default 420 × 620 size</sub></td>
-    <td align="center" width="33%"><img src="docs/media/reading-pdf.png" alt="Reading a PDF page"><br><sub><b>PDF pages</b> stay faithful to the original</sub></td>
+    <td align="center" width="33%"><img src="docs/media/hand-tool.png" alt="A PDF page zoomed to 140% with the hand tool switched on in the floating zoom controls"><br><sub><b>Zoom in</b>, then drag the page with the hand tool</sub></td>
     <td align="center" width="33%"><img src="docs/media/appearance.png" alt="The Appearance panel with theme cards"><br><sub><b>Appearance</b>: hover to preview, click to keep</sub></td>
   </tr>
 </table>
@@ -88,7 +101,15 @@ computer.
     <source media="(prefers-color-scheme: dark)" srcset="docs/media/library-dark.png">
     <img src="docs/media/library-light.png" alt="The document library beside a PDF in a wide window" width="880">
   </picture>
-  <br><sub><b>The library</b> opens beside the page in wider windows</sub>
+  <br><sub><b>The library</b> opens beside the page in wider windows, on whichever side you prefer</sub>
+</p>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/media/library-resize-dark.gif">
+    <img src="docs/media/library-resize-light.gif" alt="Dragging the divider makes the library wider and the page refits; a double-click puts it back" width="720">
+  </picture>
+  <br><sub><b>Make room</b>: drag the divider and the page refits when you let go; double-click to reset</sub>
 </p>
 
 <p align="center">
@@ -130,9 +151,35 @@ The [implementation status](docs/floating-reader-implementation.md) separates wh
 from what isn't yet. Float Reader is a working release candidate, not a finished 1.0. Open items
 such as screen-reader testing and very large files are listed there, not glossed over.
 
-## Try it
+## Download
 
-There's no packaged download yet. To build it yourself you need Node.js and Rust; the
+Get the newest version from the
+[latest release](https://github.com/RVYNP/float-reader-public/releases/latest). There's nothing to
+sign up for.
+
+| Your computer | File to download |
+| --- | --- |
+| **Windows** (64-bit) | `Float-Reader-0.1.0-windows-x64-setup.exe` installs it just for you, no administrator needed. Prefer not to install? Unzip `Float-Reader-0.1.0-windows-x64-portable.zip` anywhere and run **Float Reader.exe**. |
+| **Mac** with Apple silicon (M1 or later) | `Float-Reader-0.1.0-macos-arm64.dmg`. There's no version for Intel Macs yet. |
+
+The version number in each file name changes with every release. To check a download, compare it
+with `SHA256SUMS.txt` on the same page.
+
+**The first time you open it.** Float Reader isn't code-signed yet, so your computer asks you to
+confirm once:
+
+- **Windows:** if a blue "Windows protected your PC" screen appears, choose **More info**, then
+  **Run anyway**.
+- **Mac:** open the `.dmg` and drag Float Reader to Applications. The first time you open it, macOS
+  says it can't verify the developer.
+  - On macOS 15 (Sequoia) or later, click **Done**, open **System Settings › Privacy & Security**,
+    scroll down and click **Open Anyway**.
+  - On macOS 14 or earlier, Control-click (or right-click) the app, choose **Open**, then **Open**
+    again.
+
+### Build it yourself
+
+Developers can build from source with Node.js and Rust; the
 [development guide](docs/development.md) covers Windows and macOS step by step.
 
 ```bash
