@@ -1,9 +1,34 @@
-.library-root { flex: 0 0 270px; width: 270px; min-width: 0; min-height: 0; margin: 0 0 0 6px; }
-.library-panel { display: flex; flex-direction: column; height: 100%; min-height: 0; padding: 10px; overflow: auto; border: 1px solid var(--border); border-radius: 9px; background: var(--raise); scrollbar-width: thin; scrollbar-color: var(--faint) transparent; }
+.library-root { --library-width: 270px; position: relative; display: flex; flex: 0 0 auto; width: calc(var(--library-width) + 10px); min-width: 0; min-height: 0; margin: 0 0 0 6px; }
+.library-panel { display: flex; flex-direction: column; flex: 1 1 auto; height: 100%; min-width: 0; min-height: 0; padding: 10px; overflow: auto; border: 1px solid var(--border); border-radius: 9px; background: var(--raise); scrollbar-width: thin; scrollbar-color: var(--faint) transparent; }
 .library-panel button, .library-panel input, .library-panel select { font-size: 12px; }
 .library-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-shrink: 0; margin-bottom: 6px; }
 .library-header h2 { margin: 0; font-size: 14px; font-weight: 650; }
-.library-header button { padding: 0 7px; font-size: 22px; color: var(--muted); line-height: 28px; }
+.library-header-actions { display: flex; align-items: center; flex-shrink: 0; }
+.library-header button { display: grid; place-items: center; width: 26px; height: 28px; padding: 0; color: var(--muted); }
+.library-header button:hover { color: var(--fg); }
+/* Resize handle: a 10 px hit area between the library and the reading panel. */
+#reader-layout.library-open > #workspace { margin-left: 0; }
+.library-right { flex-direction: row-reverse; }
+.library-right > .library-root { flex-direction: row-reverse; margin: 0 6px 0 0; }
+#reader-layout.library-right.library-open > #workspace { margin: 0 0 0 6px; }
+.library-resize { position: relative; z-index: 2; flex: 0 0 10px; display: grid; place-items: center; cursor: col-resize; touch-action: none; outline: none; }
+.library-resize::before { content: ''; position: absolute; inset: 0 4px; border-radius: 1px; background: var(--accent-border); }
+.library-resize-grip { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; width: 8px; height: 36px; border-radius: 4px; background: var(--accent); }
+.library-resize-grip span { width: 2px; height: 2px; border-radius: 50%; background: var(--on-accent); }
+/* Light: the design's dark ink pill. Dark: a raised card, so it doesn't flare against dark surfaces. */
+.library-resize-tip { position: absolute; top: 50%; left: calc(100% + 6px); display: flex; align-items: center; gap: 6px; padding: 5px 8px; border: 1px solid light-dark(var(--fg), var(--border)); border-radius: 6px; background: light-dark(var(--fg), var(--card)); color: light-dark(var(--chrome), var(--fg)); font: 10px/1.4 Consolas, monospace; white-space: nowrap; pointer-events: none; transform: translateY(-50%); }
+.library-right .library-resize-tip { left: auto; right: calc(100% + 6px); }
+.library-resize-value { color: light-dark(var(--faint), var(--muted)); font-variant-numeric: tabular-nums; }
+.library-resize::before, .library-resize-grip, .library-resize-tip { opacity: 0; transition: opacity .12s; }
+.library-resize:hover::before, .library-resize:hover .library-resize-grip, .library-resize:focus-visible::before, .library-resize:focus-visible .library-resize-grip, .library-resize:focus-visible .library-resize-tip, .library-resizing .library-resize::before, .library-resizing .library-resize-grip, .library-resizing .library-resize-tip { opacity: 1; }
+.library-resize:hover .library-resize-tip { opacity: 1; transition-delay: .35s; }
+.library-resizing .library-resize .library-resize-tip, .library-resize:focus-visible .library-resize-tip { transition-delay: 0s; }
+.library-resize:focus-visible .library-resize-grip { outline: 2px solid var(--accent); outline-offset: 2px; }
+.library-resizing, .library-resizing * { cursor: col-resize !important; user-select: none; }
+/* Panels move live during a drag; reader hosts keep their width, anchored away from the handle, and refit once on release. */
+.library-resizing .reader-host { width: var(--reader-frozen-width); }
+.library-resizing #reader-layout:not(.library-right) .reader-host { left: auto; }
+#library-toggle[data-library-side=right] svg { transform: scaleX(-1); }
 .library-add { flex-shrink: 0; text-align: center; border-color: var(--accent-border); color: var(--accent-ink); background: var(--accent-soft); font-weight: 600; margin-bottom: 10px; }
 .library-add:hover { background: var(--accent-soft-hover); }
 .library-search-label { display: block; flex-shrink: 0; font-size: 10px; color: var(--muted); margin-bottom: 4px; }
@@ -57,10 +82,15 @@
 .library-remove-confirmation p { margin-top: 0; font-size: 12px; }
 .library-remove-confirmation button { margin: 2px 3px 0 0; }
 @media (max-width: 719px) {
-  .library-root { position: absolute; z-index: 20; inset: 0; width: auto; margin: 0; }
+  .library-root { position: absolute; z-index: 20; inset: 0; display: block; width: auto; margin: 0; }
+  .library-right > .library-root { margin: 0; }
+  #reader-layout.library-open > #workspace, #reader-layout.library-right.library-open > #workspace { margin: 0 6px; }
+  .library-resize { display: none; }
   .library-backdrop { display: block; position: absolute; inset: 0; width: 100%; height: 100%; border: 0; padding: 0; border-radius: 0; background: var(--scrim); }
   .library-backdrop:hover { background: var(--scrim); }
   .library-panel { position: relative; width: min(306px, calc(100% - 38px)); margin-left: 6px; box-shadow: var(--shadow-drawer); }
+  /* --shadow-drawer casts rightward; a right-docked drawer uses the symmetric popover shadow. */
+  .library-right .library-panel { margin: 0 6px 0 auto; box-shadow: var(--shadow-popover); }
 }
 @media (max-height: 480px) {
   .library-panel { padding: 7px 9px; }
