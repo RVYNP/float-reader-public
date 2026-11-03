@@ -3,6 +3,7 @@ import { EPUB } from 'foliate-js/epub.js';
 import 'foliate-js/view.js';
 import type { Locator, OutlineItem, Position, ReaderAdapter, ReaderContext, ReaderOptions, ReaderSource } from '../types';
 import { isDark, liftInk, onAppearanceChange, parseRgb, readingColors, rgbToHex, type Rgb } from '../theme';
+import { MIN_SPREAD_WIDTH, pagesLabel, pairedSides } from '../spread';
 
 const RESOURCE_LIMIT = 64 * 1024 * 1024;
 const ARCHIVE_LIMIT = 512 * 1024 * 1024;
@@ -10,8 +11,8 @@ const XHTML = 'http://www.w3.org/1999/xhtml';
 const CONTENT_CSP = "default-src 'none'; script-src 'none'; connect-src 'none'; img-src blob: data:; font-src blob: data:; style-src 'unsafe-inline' blob:; media-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'";
 const clamp = (n: number) => Math.max(0, Math.min(1, Number.isFinite(n) ? n : 0));
 
-type Section = { id: string; size: number; linear?: string; createDocument: () => Promise<Document>; unload: () => void };
-type FoliateBook = { sections: Section[]; rendition: { layout?: string; spread?: string }; toc?: TocNode[]; transformTarget: EventTarget; destroy: () => void };
+type Section = { id: string; size: number; linear?: string; pageSpread?: string; createDocument: () => Promise<Document>; unload: () => void };
+type FoliateBook = { sections: Section[]; dir?: string; rendition: { layout?: string; spread?: string }; toc?: TocNode[]; transformTarget: EventTarget; destroy: () => void };
 type TocNode = { label: string; href: string; subitems?: TocNode[] };
 type Target = { index: number; anchor?: number | ((doc: Document) => Range | Element | number) };
 type FoliateView = HTMLElement & {
@@ -22,6 +23,8 @@ type FoliateView = HTMLElement & {
   renderer: HTMLElement & {
     index?: number; goTo: (target: Target) => Promise<void>; setStyles?: (styles: string) => void;
     getContents: () => { doc: Document; index?: number }[];
+    /** Fixed layout only: which spread, and which side of it, shows a section. */
+    getSpreadOf?: (section: Section) => { index: number; side: 'left' | 'right' | 'center' } | undefined;
   };
 };
 
@@ -86,6 +89,7 @@ function rangeAtOffset(doc: Document, offset: number) {
 
 export class EpubAdapter implements ReaderAdapter {
   mode: 'fixed' | 'paginated' = 'paginated';
+  readonly spreads = true;
   private host!: HTMLElement;
   private context!: ReaderContext;
   private options!: ReaderOptions;
@@ -102,7 +106,15 @@ export class EpubAdapter implements ReaderAdapter {
   private weightPrefix: number[] = [0];
   private totalWeight = 0;
   private activeIndex = 0;
-  private lastFixedIndex = -1;
+  /** Fixed-layout sections on screen in reading order: one page, or both pages of a spread. */
+  private visible: number[] = [0];
+  /** Two-page layout and cover pairing currently applied to Foliate. */
+  private layoutSpread = false;
+  private layoutCover = true;
+  /** Publisher page-spread sides, restored whenever the cover option is on. */
+  private declaredSides: (string | undefined)[] = [];
+  private observer?: ResizeObserver;
+  private resizeTimer?: ReturnType<typeof setTimeout>;
   private chapter = '';
   private position: Position = { label: 'Opening EPUB…', fraction: 0, locator: { kind: 'epub' }, scrub: { current: 0, total: 100, unit: 'percent' } };
   private explicitEnd = false;
@@ -159,6 +171,9 @@ export class EpubAdapter implements ReaderAdapter {
     this.book.rendition ??= {}; this.book.rendition.spread = 'none';
     // Reflowable text follows the reading theme; fixed-layout pages stay faithful.
     if (this.mode === 'paginated') host.classList.add('reflow-reader');
+    this.declaredSides = this.book.sections.map(section => section.pageSpread);
+    this.layoutSpread = this.spreadState() === 'active'; this.layoutCover = this.options.cover !== false;
+    this.pairSections();
     this.book.transformTarget.addEventListener('data', event => {
       const detail = (event as CustomEvent).detail;
       if (['application/xhtml+xml', 'text/html', 'image/svg+xml'].includes(detail.type))
@@ -181,14 +196,16 @@ export class EpubAdapter implements ReaderAdapter {
       if (this.disposed) return;
       const detail = (event as CustomEvent).detail;
       this.activeIndex = detail.section?.current ?? view.renderer.index ?? this.activeIndex;
+      if (this.mode === 'fixed') {
+        // Foliate reports one page of a spread; the position is its first page in reading order.
+        const shown = this.pairOf(this.activeIndex);
+        for (const index of this.visible) if (!shown.includes(index)) this.book?.sections[index]?.unload();
+        this.visible = shown; this.activeIndex = shown[0];
+      }
       this.chapter = detail.tocItem?.label ?? `Chapter ${this.activeIndex + 1}`;
       const doc = detail.range?.startContainer?.ownerDocument;
       const offset = doc ? offsetOfRange(doc, detail.range) : 0;
       this.updatePosition(offset, detail.cfi);
-      if (this.mode === 'fixed' && this.lastFixedIndex !== this.activeIndex) {
-        if (this.lastFixedIndex >= 0) this.book?.sections[this.lastFixedIndex]?.unload();
-        this.lastFixedIndex = this.activeIndex;
-      }
     });
     view.addEventListener('external-link', event => { event.preventDefault(); const href = (event as CustomEvent).detail.href;
       if (/^https?:\/\//i.test(href)) void context.openExternal(href).catch(context.onError);
@@ -199,7 +216,7 @@ export class EpubAdapter implements ReaderAdapter {
       // The postinstall patch applies this before src is assigned; assert defense too.
       const frame = doc.defaultView?.frameElement;
       if (!frame || frame.getAttribute('sandbox') !== 'allow-same-origin') throw new Error('Unsafe EPUB frame sandbox. Reinstall the application.');
-      if (this.mode === 'fixed') context.onFrame?.(doc);
+      if (this.mode === 'fixed') { context.onFrame?.(doc); this.shadeGutter(doc, (event as CustomEvent).detail.index); }
       doc.addEventListener('keydown', event => {
         const target = event.target as Element;
         if (target.closest('input,textarea,select,[contenteditable="true"]')) return;
@@ -210,30 +227,103 @@ export class EpubAdapter implements ReaderAdapter {
       if (this.mode === 'paginated') this.adaptInk(doc);
     });
     await view.open(this.book);
-    // Foliate centres fixed-layout pages with plain flex centring, which pushes the left/top of a
-    // zoomed page into negative overflow that no scroll (or hand-tool pan) can reach.
-    if (this.mode === 'fixed') Object.assign(view.renderer.style, { justifyContent: 'safe center', alignItems: 'safe center' });
+    this.watchRenderer();
     this.applyOptions();
     if (this.mode === 'paginated') this.unsubscribe = onAppearanceChange(() => {
       this.applyOptions();
       for (const { doc } of view.renderer.getContents()) this.adaptInk(doc);
     });
     await view.renderer.goTo({ index: 0 });
-    if (this.mode === 'fixed') view.renderer.addEventListener('scroll', () => {
-      if (view.renderer.scrollTop < view.renderer.scrollHeight - view.renderer.clientHeight - 2) this.explicitEnd = false;
+    let box = `${host.offsetWidth}:${host.offsetHeight}`;
+    this.observer = new ResizeObserver(() => {
+      const next = `${host.offsetWidth}:${host.offsetHeight}`;
+      if (next === box || !host.offsetWidth || !host.offsetHeight) return;
+      box = next;
+      clearTimeout(this.resizeTimer);
+      // Foliate refits pages and columns itself; only a change of two-page layout needs this adapter.
+      this.resizeTimer = setTimeout(() => {
+        if (this.disposed || !this.options.spread) return;
+        if ((this.spreadState() === 'active') !== this.layoutSpread) void this.enqueue(() => this.relayout()).catch(context.onError);
+        else if (this.layoutSpread && this.mode === 'paginated') this.applyMeasure();
+      }, 150);
+    });
+    this.observer.observe(host);
+  }
+
+  /** Two-page state for the current options and panel size. Foliate's paginator only sets two columns in a landscape box. */
+  private spreadState(): Position['spread'] {
+    if (!this.options.spread) return undefined;
+    const width = this.host.offsetWidth;
+    return width >= MIN_SPREAD_WIDTH && (this.mode === 'fixed' || width > this.host.offsetHeight) ? 'active' : 'waiting';
+  }
+  /** Foliate pairs fixed-layout pages when a book is opened, so the pairing is configured on the book first. */
+  private pairSections() {
+    const book = this.book;
+    if (!book || this.mode !== 'fixed') return;
+    book.rendition.spread = this.layoutSpread ? 'both' : 'none';
+    const sides = this.layoutSpread && !this.layoutCover ? pairedSides(this.declaredSides, book.dir === 'rtl') : this.declaredSides;
+    book.sections.forEach((section, index) => { section.pageSpread = sides[index]; });
+  }
+  /** Sections shown together with `index`, in reading order. */
+  private pairOf(index: number): number[] {
+    const book = this.book, renderer = this.view?.renderer;
+    if (!book || !renderer?.getSpreadOf || this.mode !== 'fixed' || !this.layoutSpread) return [index];
+    const spread = renderer.getSpreadOf(book.sections[index])?.index;
+    return [index - 1, index, index + 1].filter(i => i >= 0 && i < book.sections.length && renderer.getSpreadOf!(book.sections[i])?.index === spread);
+  }
+  /** A soft paper shade on the inner edge of each page of a fixed-layout spread. */
+  private shadeGutter(doc: Document, index: number) {
+    const section = this.book?.sections[index];
+    const side = section && this.pairOf(index).length > 1 ? this.view?.renderer.getSpreadOf?.(section)?.side : undefined;
+    if (side !== 'left' && side !== 'right') return;
+    const edge = side === 'left' ? 'right' : 'left';
+    const style = doc.createElementNS(XHTML, 'style');
+    // Faithful paper shading, identical in every theme because pages are never recolored.
+    style.textContent = `html::after { content: ''; position: fixed; top: 0; bottom: 0; ${edge}: 0; width: 7.5%; z-index: 2147483647; pointer-events: none; background: linear-gradient(to ${edge}, transparent, #1e1a2e12); }`;
+    (doc.head ?? doc.documentElement).append(style);
+  }
+  /** Prepares a fixed-layout renderer; Foliate creates a new one whenever the book is (re)opened. */
+  private watchRenderer() {
+    const renderer = this.view?.renderer;
+    if (this.mode !== 'fixed' || !renderer) return;
+    // Foliate centres fixed-layout pages with plain flex centring, which pushes the left/top of a
+    // zoomed page into negative overflow that no scroll (or hand-tool pan) can reach.
+    Object.assign(renderer.style, { justifyContent: 'safe center', alignItems: 'safe center' });
+    renderer.addEventListener('scroll', () => {
+      if (renderer.scrollTop < renderer.scrollHeight - renderer.clientHeight - 2) this.explicitEnd = false;
       this.updatePosition(0);
     }, { passive: true });
+  }
+  /** Applies the current options and panel size, rebuilding Foliate's fixed-layout renderer when its pairing changes. */
+  private async relayout() {
+    if (!this.view || !this.book) return;
+    const old = { ...this.position.locator };
+    const spread = this.spreadState() === 'active', cover = this.options.cover !== false;
+    const repair = this.mode === 'fixed' && (spread !== this.layoutSpread || (spread && cover !== this.layoutCover));
+    this.layoutSpread = spread; this.layoutCover = cover;
+    if (repair) {
+      this.pairSections();
+      this.view.close();
+      await this.view.open(this.book);
+      this.watchRenderer();
+    }
+    this.applyOptions();
+    await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    await this.restoreNow(old);
   }
 
   private updatePosition(offset: number, cfi?: string) {
     if (!this.book || !this.view || this.disposed) return;
     const index = this.activeIndex, total = this.book.sections.length;
-    const renderer = this.view.renderer;
-    const within = this.mode === 'fixed' ? clamp(renderer.scrollTop / Math.max(1, renderer.scrollHeight)) : clamp(offset / this.weights[index]);
-    const fraction = this.explicitEnd ? 1 : this.mode === 'fixed' ? (index + within) / total
+    const renderer = this.view.renderer, fixed = this.mode === 'fixed';
+    const shown = fixed ? this.visible : [index];
+    const within = fixed ? clamp(renderer.scrollTop / Math.max(1, renderer.scrollHeight)) : clamp(offset / this.weights[index]);
+    const fraction = this.explicitEnd ? 1 : fixed ? (index + within * shown.length) / total
       : clamp((this.weightPrefix[index] + offset) / this.totalWeight);
-    this.position = { label: this.mode === 'fixed' ? `Page ${index + 1} of ${total}` : `${this.chapter || `Chapter ${index + 1}`} · ≈${Math.round(fraction * 100)}%`, fraction,
-      scrub: this.mode === 'fixed' ? { current: index + 1, total, unit: 'page' } : { current: fraction * 100, total: 100, unit: 'percent' },
+    const spread = this.options.spread ? this.layoutSpread ? 'active' as const : 'waiting' as const : undefined;
+    this.position = { label: fixed ? pagesLabel(shown.map(page => page + 1), total) : `${this.chapter || `Chapter ${index + 1}`} · ≈${Math.round(fraction * 100)}%`, fraction,
+      scrub: fixed ? { current: index + 1, total, unit: 'page' } : { current: fraction * 100, total: 100, unit: 'percent' },
+      ...(spread ? { spread } : {}),
       locator: { kind: 'epub', spine: this.book.sections[index]?.id, index, cfi: cfi ?? this.position.locator.cfi, offset, fraction, within, end: this.explicitEnd } };
     this.context.onPosition(this.position);
   }
@@ -308,7 +398,8 @@ export class EpubAdapter implements ReaderAdapter {
     const renderer = this.view.renderer, options = this.options;
     if (this.mode === 'fixed') renderer.setAttribute('zoom', options.zoom === 1 ? `fit-${options.fit}` : String(options.zoom));
     else {
-      renderer.setAttribute('flow', 'paginated'); renderer.setAttribute('max-column-count', '1');
+      renderer.setAttribute('flow', 'paginated'); renderer.setAttribute('max-column-count', this.layoutSpread ? '2' : '1');
+      this.applyMeasure();
       renderer.setAttribute('margin', `${options.margin}px`); renderer.setAttribute('gap', `${Math.max(2, options.margin / Math.max(1, this.host.clientWidth) * 200)}%`);
       // The frame's color-scheme must match the app's or Chromium paints it opaque; Foliate paints --theme-bg-color behind each column.
       const { scheme, ink, paper, accent } = readingColors();
@@ -336,16 +427,22 @@ export class EpubAdapter implements ReaderAdapter {
     }
     if (changed.length) this.lifted.set(doc, changed);
   }
+  /** Foliate shows two columns only when a column is narrower than the box; cap the measure so wide windows keep readable lines. */
+  private applyMeasure() {
+    const renderer = this.view?.renderer;
+    if (!renderer || this.mode !== 'paginated') return;
+    const measure = this.layoutSpread ? `${Math.round(Math.min(640, Math.max(280, this.host.clientWidth * .45)))}px` : null;
+    if (renderer.getAttribute('max-inline-size') === measure) return;
+    if (measure) renderer.setAttribute('max-inline-size', measure); else renderer.removeAttribute('max-inline-size');
+  }
   async setOptions(options: ReaderOptions) {
-    return this.enqueue(async () => { const old = { ...this.position.locator }; this.options = { ...options }; this.applyOptions();
-      await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); await this.restoreNow(old);
-    });
+    return this.enqueue(async () => { this.options = { ...options }; await this.relayout(); });
   }
   outline() { return this.items; }
   /** Fixed-layout pages scroll inside Foliate's renderer when zoomed; reflowable chapters paginate and never pan. */
   scroller() { return this.mode === 'fixed' ? this.view?.renderer : undefined; }
   destroy() {
-    this.disposed = true; this.abort.abort(); this.unsubscribe?.();
+    this.disposed = true; this.abort.abort(); this.unsubscribe?.(); this.observer?.disconnect(); clearTimeout(this.resizeTimer);
     try { this.view?.close(); } catch { /* An opening cancellation may precede Foliate's first page. */ }
     this.view?.remove(); this.book?.destroy(); void this.archive?.close(); this.view = undefined; this.book = undefined;
     this.host?.classList.remove('reflow-reader');

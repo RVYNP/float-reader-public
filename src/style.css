@@ -228,7 +228,7 @@ dialog select { padding-right: 28px; }
 .check { display: flex; align-items: center; gap: 8px; }
 .menu-grid { display: flex; flex-direction: column; gap: 2px; }
 .menu-grid button { display: flex; justify-content: space-between; align-items: center; text-align: left; gap: 8px; font-size: 12px; white-space: normal; }
-.menu-grid button:nth-child(3), .menu-grid button:nth-child(7), .menu-grid button:nth-child(14) { border-bottom: 1px solid var(--border); border-radius: 0; padding-bottom: 12px; margin-bottom: 7px; }
+.menu-grid button:nth-child(3), .menu-grid button:nth-child(7), .menu-grid button:nth-child(16) { border-bottom: 1px solid var(--border); border-radius: 0; padding-bottom: 12px; margin-bottom: 7px; }
 .menu-label { display: inline-flex; align-items: center; gap: 8px; }
 .menu-label svg { flex-shrink: 0; color: var(--accent-ink); }
 .menu-value { color: var(--muted); font: 10px/1.4 Consolas, monospace; white-space: nowrap; }

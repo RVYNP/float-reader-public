@@ -6,6 +6,7 @@ import { ImageAdapter } from './adapters/image';
 import { initAppearance } from './theme';
 import { appearanceSummary, createAppearanceSheet, paletteIcon } from './appearance';
 import { Panner } from './pan';
+import { MIN_SPREAD_WIDTH, pagesLabel, spreadPages } from './spread';
 
 initAppearance();
 
@@ -15,7 +16,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <div id="loading" role="status" hidden><span></span><button id="cancel">Cancel</button></div>
   <div id="reader-layout"><div id="library-root"></div>
   <main id="workspace"><section id="empty"><div class="book-mark" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M9 3v18m4-13h3m-3 4h3"/></svg></div><p class="eyebrow">KEEP YOUR PLACE</p><h1>A little room<br>to read.</h1><p>Your document, beside your work.<br>Open a file and settle in.</p><button id="empty-open" class="primary">Open a document <span>↗</span></button><p class="formats">PDF · EPUB · MARKDOWN · TEXT</p><div id="recents"></div><p id="preview-note" hidden>Browser preview · Pin and size lock are available in the desktop app.</p></section>
-  <div id="view-controls" role="group" aria-label="View controls" hidden><button id="zoom-out" aria-label="Zoom out" title="Zoom out (Ctrl −)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg></button><button id="zoom-level">Fit</button><button id="zoom-in" aria-label="Zoom in" title="Zoom in (Ctrl +)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M12 5v14"/></svg></button><span class="view-sep" aria-hidden="true"></span><button id="hand-tool" aria-label="Hand tool" aria-pressed="false" aria-disabled="true" title="Zoom in to pan"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 11V6a2 2 0 0 0-4 0M14 10V4a2 2 0 0 0-4 0v2M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg></button><span id="view-layout" class="view-group" role="group" aria-label="Page layout" hidden><!-- Page-layout slot: a .view-sep plus single/two-page buttons, filled by the spread feature. --></span></div></main>
+  <div id="view-controls" role="group" aria-label="View controls" hidden><button id="zoom-out" aria-label="Zoom out" title="Zoom out (Ctrl −)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg></button><button id="zoom-level">Fit</button><button id="zoom-in" aria-label="Zoom in" title="Zoom in (Ctrl +)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M12 5v14"/></svg></button><span class="view-sep" aria-hidden="true"></span><button id="hand-tool" aria-label="Hand tool" aria-pressed="false" aria-disabled="true" title="Zoom in to pan"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 11V6a2 2 0 0 0-4 0M14 10V4a2 2 0 0 0-4 0v2M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg></button><span id="view-layout" class="view-group" role="group" aria-label="Page layout" hidden><span class="view-sep" aria-hidden="true"></span><button id="view-single" aria-label="Single page" aria-pressed="true" title="Single page"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg></button><button id="view-spread" aria-label="Two pages" aria-pressed="false" title="Two-page spread (Ctrl 3)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg></button></span></div></main>
   </div>
   <footer><button id="previous" aria-label="Previous page" title="Previous page (PgUp)" disabled>←</button><button id="position" title="Go to location (Ctrl+G)" disabled>Ready when you are</button><button id="next" aria-label="Next page" title="Next page (PgDn)" disabled>→</button><input id="progress" type="range" aria-label="Document position" title="Click or drag to jump through the document" min="0" max="100" step="1" value="0" disabled></footer>
   <dialog id="menu"><div class="dialog-head"><h2>Reader controls</h2><button data-close aria-label="Close menu">×</button></div><div class="menu-grid">
@@ -23,6 +24,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
     <button data-action="pin">Toggle pin <kbd>Ctrl Shift T</kbd></button><button data-action="lock">Toggle size lock <kbd>Ctrl Shift L</kbd></button>
     <button data-action="compact">Compact window</button><button data-action="reading">Reading window</button>
     <button data-action="fit-page">Fit page <kbd>Ctrl 0</kbd></button><button data-action="fit-width">Fit width <kbd>Ctrl 2</kbd></button><button data-action="rotate">Rotate page 90°</button>
+    <button id="spread-toggle" data-action="spread" aria-pressed="false" disabled>Two-page spread <kbd>Ctrl 3</kbd></button><button id="cover-toggle" data-action="cover" aria-pressed="true" disabled>Cover page alone</button>
     <button data-action="smaller">Smaller text / zoom <kbd>Ctrl −</kbd></button><button data-action="larger">Larger text / zoom <kbd>Ctrl +</kbd></button><button data-action="appearance"><span class="menu-label">${paletteIcon}Appearance…</span><span class="menu-value" id="appearance-summary"></span></button><button data-action="type">Typography & wrapping</button>
     <button data-action="start">First location</button><button data-action="end">Last location</button><button data-action="screen-previous">Previous screen</button><button data-action="screen-next">Next screen</button>
     <button data-action="shortcuts">Keyboard shortcuts</button><button data-action="clear-recents">Clear recent files</button><button data-action="clear-data">Delete saved reading data…</button>
@@ -32,7 +34,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <dialog id="contents"><div class="dialog-head"><h2>Contents</h2><button data-close aria-label="Close contents">×</button></div><div id="outline-list"></div></dialog>
   <dialog id="typography"><div class="dialog-head"><h2>Reading settings</h2><button data-close aria-label="Close settings">×</button></div><label>Text size <input id="font-size" type="number" min="12" max="40" value="18"></label><label>Line spacing <select id="line-height"><option>1.4</option><option selected>1.65</option><option>1.9</option><option>2.2</option></select></label><label>Margins <select id="margin"><option value="12">Narrow</option><option value="24" selected>Comfortable</option><option value="40">Wide</option></select></label><label class="check"><input id="wrap" type="checkbox" checked>Wrap plain text</label></dialog>
   <dialog id="appearance"></dialog>
-  <dialog id="shortcuts"><div class="dialog-head"><h2>Keyboard shortcuts</h2><button data-close aria-label="Close shortcuts">×</button></div><dl><dt>Next / previous page</dt><dd>PgDn / PgUp</dd><dt>Page mode navigation</dt><dd>Right / Left</dd><dt>Next / previous screen</dt><dd>Space / Shift Space</dd><dt>Scroll</dt><dd>Up / Down</dd><dt>First / last location</dt><dd>Home / End</dd><dt>Go to location</dt><dd>Ctrl G</dd><dt>Back after a jump</dt><dd>Alt Left</dd><dt>Open file</dt><dd>Ctrl O</dd><dt>Document library</dt><dd>Ctrl B</dd><dt>Pin / size lock</dt><dd>Ctrl Shift T / L</dd><dt>Fit page / width</dt><dd>Ctrl 0 / 2</dd><dt>Zoom / text size</dt><dd>Ctrl + / −</dd><dt>Hand tool (pan a zoomed page)</dt><dd>H · or middle-drag</dd><dt>Dismiss a dialog</dt><dd>Escape</dd></dl></dialog>
+  <dialog id="shortcuts"><div class="dialog-head"><h2>Keyboard shortcuts</h2><button data-close aria-label="Close shortcuts">×</button></div><dl><dt>Next / previous page</dt><dd>PgDn / PgUp</dd><dt>Page mode navigation</dt><dd>Right / Left</dd><dt>Next / previous screen</dt><dd>Space / Shift Space</dd><dt>Scroll</dt><dd>Up / Down</dd><dt>First / last location</dt><dd>Home / End</dd><dt>Go to location</dt><dd>Ctrl G</dd><dt>Back after a jump</dt><dd>Alt Left</dd><dt>Open file</dt><dd>Ctrl O</dd><dt>Document library</dt><dd>Ctrl B</dd><dt>Pin / size lock</dt><dd>Ctrl Shift T / L</dd><dt>Fit page / width</dt><dd>Ctrl 0 / 2</dd><dt>Two-page spread</dt><dd>Ctrl 3</dd><dt>Zoom / text size</dt><dd>Ctrl + / −</dd><dt>Hand tool (pan a zoomed page)</dt><dd>H · or middle-drag</dd><dt>Dismiss a dialog</dt><dd>Escape</dd></dl></dialog>
   <dialog id="delete-data"><h2>Delete saved reading data?</h2><p>This removes saved positions and reading settings. Your documents and recent-file list remain. The current position will be saved again when you navigate.</p><div class="dialog-actions"><button data-close>Cancel</button><button id="confirm-delete" class="danger">Delete reading data</button></div></dialog>
   <input id="file-input" type="file" accept=".pdf,.epub,.md,.markdown,.txt,.png,.jpg,.jpeg,.webp,.gif,.avif,.bmp" hidden>`;
 
@@ -50,6 +52,7 @@ let saveQueue = Promise.resolve();
 let activeHost: HTMLElement | undefined;
 let cancelPending: (() => void) | undefined;
 const pan = new Panner();
+let pannedScroller: HTMLElement | undefined;
 
 function notify(message: string, retry = false) { $('notice').hidden = false; $('notice').querySelector('span')!.textContent = message; $('retry-save').hidden = !retry; }
 function fail(error: unknown) { notify(error instanceof Error ? error.message : String(error)); }
@@ -73,21 +76,42 @@ function showPosition(p: Position) {
 function updateScrubValue(preview = false) {
   if (!position) return;
   const value = scrubber.valueAsNumber, min = Number(scrubber.min), max = Number(scrubber.max);
+  const cover = position.scrub.cover;
   const label = position.scrub.unit === 'percent' ? `${value.toFixed(1)}% position`
+    : cover !== undefined ? pagesLabel(spreadPages(value, max, cover), max)
     : `${position.scrub.unit === 'page' ? 'Page' : 'Line'} ${value} of ${max}`;
   scrubber.style.setProperty('--scrub-fill', `${max > min ? (value - min) / (max - min) * 100 : 0}%`);
   scrubber.setAttribute('aria-valuenow', String(value));
   scrubber.setAttribute('aria-valuetext', label);
   if (preview) $('position').textContent = `${label} · release to jump`;
 }
-/** Syncs the view-controls pill and the title subtitle with the current zoom, fit and hand-tool state. */
+/** Syncs the view-controls pill, page-layout toggles and the title subtitle with the current zoom, layout and hand-tool state. */
 function updateViewControls() {
   if (!reader || !active) return;
+  // Fixed-layout EPUB rebuilds its renderer when the page layout changes; follow it.
+  const scroller = reader.scroller?.();
+  if (scroller !== pannedScroller) { pannedScroller = scroller; pan.attach(scroller, activeHost); }
   pan.refresh();
   const fitted = Math.abs(options.zoom - 1) < .005, width = options.fit === 'width';
   const level = fitted ? (width ? 'Width' : 'Fit') : `${Math.round(options.zoom * 100)}%`;
-  const kind = reader.mode !== 'fixed' ? (reader.mode === 'paginated' ? 'Reading view' : 'Scroll view') : fitted ? (width ? 'Fit width' : 'Page view') : level;
+  const layout = position?.spread, waiting = layout === 'waiting' ? `Two pages appear when the reading area is at least ${MIN_SPREAD_WIDTH} px wide` : '';
+  const kind = reader.mode === 'fixed' && fitted && !width && layout === 'active' ? 'Two-page view'
+    : `${reader.mode !== 'fixed' ? (reader.mode === 'paginated' ? 'Reading view' : 'Scroll view') : fitted ? (width ? 'Fit width' : 'Page view') : level}${layout === 'active' ? ' · Two pages' : ''}`;
   $('filekind').textContent = `${active.format.toUpperCase()} · ${kind}${pan.hand ? ' · Hand' : ''}`;
+  $('filekind').title = waiting;
+  const spreads = !!reader.spreads, spread = spreads && options.spread;
+  const toggles = [$<HTMLButtonElement>('spread-toggle'), $<HTMLButtonElement>('view-spread')];
+  for (const button of toggles) {
+    button.setAttribute('aria-pressed', String(spread));
+    if (waiting) button.setAttribute('aria-description', waiting); else button.removeAttribute('aria-description');
+  }
+  $<HTMLButtonElement>('spread-toggle').disabled = !spreads;
+  $<HTMLButtonElement>('spread-toggle').title = waiting;
+  $('view-spread').title = waiting ? `Two-page spread (Ctrl 3) · ${waiting}` : 'Two-page spread (Ctrl 3)';
+  $('view-single').setAttribute('aria-pressed', String(!spread));
+  const cover = $<HTMLButtonElement>('cover-toggle');
+  cover.disabled = !spread || reader.mode !== 'fixed'; cover.setAttribute('aria-pressed', String(options.cover));
+  $('view-layout').hidden = !spreads;
   $('view-controls').hidden = !pan.pannable;
   if (!pan.pannable) return;
   // Clicking the level toggles fit page/fit width; while zoomed it first returns to the current fit.
@@ -109,6 +133,8 @@ $('zoom-out').onclick = () => void action('smaller').catch(fail);
 $('zoom-in').onclick = () => void action('larger').catch(fail);
 $('zoom-level').onclick = () => void action($('zoom-level').dataset.next ?? 'fit-page').catch(fail);
 $('hand-tool').onclick = () => { if ($('hand-tool').getAttribute('aria-disabled') !== 'true') toggleHand(); };
+$('view-single').onclick = () => void changeOptions({ spread: false });
+$('view-spread').onclick = () => void changeOptions({ spread: true });
 let viewFrame = 0;
 new ResizeObserver(() => { cancelAnimationFrame(viewFrame); viewFrame = requestAnimationFrame(updateViewControls); }).observe($('workspace'));
 scrubber.oninput = () => { scrubbing = true; ++scrubRequest; updateScrubValue(true); };
@@ -185,7 +211,7 @@ async function load(open: () => Promise<Opened | null>, label = 'document'): Pro
     reader?.destroy(); activeHost?.remove();
     doc.bytes = new Uint8Array();
     reader = candidate; active = doc; options = prefs; activeHost = staging; staging.classList.remove('staging'); $('empty').hidden = true;
-    pan.attach(reader.scroller?.(), staging);
+    pannedScroller = reader.scroller?.(); pan.attach(pannedScroller, staging);
     ++scrubRequest; scrubbing = false;
     $('filename').textContent = doc.name; $('filename').title = doc.path;
     for (const id of ['previous', 'position', 'next']) $<HTMLButtonElement>(id).disabled = false;
@@ -218,6 +244,8 @@ async function action(name: string) {
   else if (name === 'compact' || name === 'reading') { if (!desktop) return notify('Window presets are available in the desktop app.'); updateWindow(await native('set_preset', { preset: name })); }
   else if (name === 'fit-page' || name === 'fit-width') await changeOptions({ fit: name === 'fit-page' ? 'page' : 'width', zoom: 1 });
   else if (name === 'rotate') await changeOptions({ rotation: (options.rotation + 90) % 360 });
+  else if (name === 'spread') { if (reader?.spreads) await changeOptions({ spread: !options.spread }); }
+  else if (name === 'cover') await changeOptions({ cover: !options.cover });
   else if (name === 'smaller' || name === 'larger') { const delta = name === 'larger' ? 1 : -1; await changeOptions(reader?.mode === 'fixed' ? { zoom: Math.round(Math.max(.25, Math.min(4, options.zoom + delta * .1)) * 100) / 100 } : { fontSize: Math.max(12, Math.min(40, options.fontSize + delta * 2)) }); }
   else if (name === 'type') { $<HTMLInputElement>('font-size').value = String(options.fontSize); $<HTMLSelectElement>('line-height').value = String(options.lineHeight); $<HTMLSelectElement>('margin').value = String(options.margin); $<HTMLInputElement>('wrap').checked = options.wrap; showDialog('typography'); }
   else if (name === 'outline') { const list = $('outline-list'); list.replaceChildren(); const entries = reader?.outline() ?? []; if (!entries.length) list.textContent = 'No contents outline in this document.'; for (const item of entries) { const button = document.createElement('button'); button.textContent = item.label; button.onclick = () => { void reader?.goTo(item.target).then(() => closeDialog($<HTMLDialogElement>('contents'))).catch(fail); }; list.append(button); } showDialog('contents'); }
@@ -240,7 +268,7 @@ document.addEventListener('keydown', event => {
   else if (event.ctrlKey && event.shiftKey && key === 'l') operation = () => void toggle('lock');
   else if (event.ctrlKey && key === 'o') operation = () => openFile();
   else if (event.ctrlKey && key === 'g') operation = jump;
-  else if (event.ctrlKey && ['+', '=', '-', '0', '2'].includes(key)) operation = () => void action(key === '0' ? 'fit-page' : key === '2' ? 'fit-width' : key === '-' ? 'smaller' : 'larger').catch(fail);
+  else if (event.ctrlKey && ['+', '=', '-', '0', '2', '3'].includes(key)) operation = () => void action(key === '0' ? 'fit-page' : key === '2' ? 'fit-width' : key === '3' ? 'spread' : key === '-' ? 'smaller' : 'larger').catch(fail);
   else if (event.altKey && key === 'arrowleft') operation = () => void navigate('back');
   else if (key === 'h' && !event.ctrlKey && !event.altKey && !event.metaKey && !event.shiftKey && !event.repeat && pan.pannable && (target === document.body || target instanceof Node && (activeHost?.contains(target) || $('view-controls').contains(target)))) operation = toggleHand;
   else if (!event.ctrlKey && !event.altKey && activeHost && (target === document.body || target instanceof Node && activeHost.contains(target))) {
