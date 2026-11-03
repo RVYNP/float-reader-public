@@ -23,11 +23,11 @@
 // Exit codes: 0 = every check that applies on this platform passed (CDP may have
 //                 been skipped, which is stated in the output),
 //             1 = a real check failed, or the app could not be launched.
-import { chromium, expect } from '@playwright/test';
+import { expect } from '@playwright/test';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import assert from 'node:assert/strict';
-import { launchNativeApp, logSkip, platformLabel, supportsCdp } from './platform.mjs';
+import { connectAppPage, launchNativeApp, logSkip, platformLabel, supportsCdp } from './platform.mjs';
 
 await mkdir('.fixtures', { recursive: true });
 await mkdir('test-results', { recursive: true });
@@ -64,24 +64,11 @@ if (!supportsCdp()) {
   console.error('Internal error: CDP path reached on a platform that does not support CDP.');
   process.exit(1);
 }
-const { child, port } = launched;
-let stderr = '';
-child.stderr.on('data', chunk => { stderr += chunk; });
+const { child } = launched;
 let browser;
 try {
-  for (let attempt = 0; attempt < 100; attempt++) {
-    if (child.exitCode !== null) throw Error(`App exited ${child.exitCode}: ${stderr}`);
-    try { browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`); break; } catch { await new Promise(r => setTimeout(r, 100)); }
-  }
-  if (!browser) throw Error(`Could not connect to the app WebView: ${stderr}`);
-  const context = browser.contexts()[0];
   let page;
-  for (let i = 0; i < 100; i++) {
-    page = context.pages().find(candidate => candidate.url().includes('tauri.localhost'));
-    if (page) break;
-    await new Promise(r => setTimeout(r, 100));
-  }
-  if (!page) throw Error('Native reader page did not load.');
+  ({ browser, page } = await connectAppPage(launched));
   await page.locator('#filename').filter({ hasText: 'native-smoke.txt' }).waitFor();
   assert.equal(await page.locator('#notice').isVisible(), false, 'No startup or IPC errors');
   const initial = await page.evaluate(() => window.__TAURI_INTERNALS__.invoke('get_state'));
@@ -105,7 +92,7 @@ try {
   }, initial);
   await page.evaluate(() => window.__TAURI_INTERNALS__.invoke('plugin:window|close', { label: 'main' }));
   for (let i = 0; child.exitCode === null && i < 50; i++) await new Promise(r => setTimeout(r, 100));
-  assert.equal(child.exitCode, 0, `Native close did not finish cleanly: ${stderr}`);
+  assert.equal(child.exitCode, 0, `Native close did not finish cleanly: ${launched.stderrTail()}`);
   console.log('Native smoke passed: embedded UI, CLI file open, IPC, pin, lock, source-line jump, save and clean close.');
 } finally {
   await browser?.close().catch(() => {});

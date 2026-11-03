@@ -6,10 +6,9 @@
 // so this script launches the app against a synthetic PDF, verifies the launch
 // lifecycle, states plainly that the transport assertion was skipped, and exits 0
 // only when those launch checks passed.
-import { chromium } from '@playwright/test';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { launchNativeApp, logSkip, platformLabel, supportsCdp } from './platform.mjs';
+import { connectAppPage, launchNativeApp, logSkip, platformLabel, supportsCdp } from './platform.mjs';
 
 await mkdir('.fixtures', { recursive: true });
 const pdf = resolve('.fixtures/swap-a.pdf');
@@ -57,22 +56,11 @@ if (!supportsCdp()) {
   console.error('Internal error: CDP path reached on a platform that does not support CDP.');
   process.exit(1);
 }
-const { child, port } = launched;
+const { child } = launched;
 let browser;
 try {
-  for (let i = 0; i < 100; i++) {
-    if (child.exitCode !== null) throw Error(`App exited ${child.exitCode}`);
-    try { browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`); break; } catch { await new Promise(r => setTimeout(r, 100)); }
-  }
-  if (!browser) throw Error('Could not connect to app WebView');
-  const context = browser.contexts()[0];
   let page;
-  for (let i = 0; i < 100; i++) {
-    page = context.pages().find(candidate => candidate.url().includes('tauri.localhost'));
-    if (page) break;
-    await new Promise(r => setTimeout(r, 100));
-  }
-  if (!page) throw Error('Reader page not found');
+  ({ browser, page } = await connectAppPage(launched));
   await page.locator('#filename').filter({ hasText: 'swap-a.pdf' }).waitFor();
   const result = await page.evaluate(async p => {
     const meta = await window.__TAURI_INTERNALS__.invoke('open_file', { path: p });
