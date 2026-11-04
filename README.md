@@ -240,8 +240,8 @@ picker that previews on hover shaped Hold My Brief's Appearance panel. The Graph
 the default palette in [Tern's published theme tokens](https://docs.stencil.so/tern/styles/variables.html).
 Thank you to the Stencil team.
 
-The screenshots read freely redistributable documents: *Photo-engraving*, a public-domain print
-manual scanned by the [Internet Archive](https://archive.org/details/photoengravingp00wilkgoog);
+The screenshots read freely redistributable documents: *The Half-Tone Process* (1895), a
+public-domain print manual scanned by the [Internet Archive](https://archive.org/details/halftoneprocessp00verf_0);
 Adobe's Photoshop UXP guide, published under the Apache License 2.0; and, for the theme sheet,
 the public-domain opening of *Pride and Prejudice*. No in-copyright scans are committed to this
 repository. `scripts/reshoot-media.mjs` regenerates the set from documents you supply, and the

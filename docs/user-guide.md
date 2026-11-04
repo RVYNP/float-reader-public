@@ -10,6 +10,11 @@ Hold My Brief to Explorer's **Open with** list for the document formats without 
 app; clean-account installer behavior has not yet been verified. A second instance routes its file
 request to the running app.
 
+A scanned PDF with no text layer shows its pages as images: text on those pages can't be selected
+or searched, and each such page carries an "Image-only page" note. Hold My Brief doesn't run OCR in
+this build, so run the PDF through an OCR tool first if you need its text. This is a known limit
+([#16](https://github.com/RVYNP/hold-my-brief/issues/16)).
+
 ## The window
 
 **Pin** keeps the reader above ordinary windows. **Lock** captures its outer dimensions while
