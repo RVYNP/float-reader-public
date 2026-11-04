@@ -33,6 +33,9 @@ Open the menu and choose **Appearance…** to open the Appearance panel at the b
 Choices are saved on this computer and applied before the window first paints, so there is no flash
 of the wrong theme. The native title bar follows the light or dark mode.
 
+The theme design is inspired by [Tern](https://stencil.so/tern) by Stencil, and the Graphite theme
+uses Tern's default palette. See [Credits](../README.md#credits).
+
 ## Moving through a document
 
 PgDn/PgUp change pages. Space/Shift+Space traverse one screen, scrolling a tall PDF page before
