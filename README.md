@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/media/hero-dark.png">
-    <img src="docs/media/hero-light.png" alt="Hold My Brief pinned beside other work, showing the first chapter of Pride and Prejudice in a small reading window" width="880">
+    <img src="docs/media/hero-light.png" alt="Hold My Brief open beside other work, showing a page of a 19th century print manual in a small reading window" width="880">
   </picture>
 </p>
 
@@ -92,15 +92,15 @@ computer.
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/media/spread-dark.png">
-    <img src="docs/media/spread-light.png" alt="Pages 2 and 3 of Alice's Adventures in Wonderland shown side by side as an open book" width="880">
+    <img src="docs/media/spread-light.png" alt="Pages 48 and 49 of the print manual shown side by side as an open book" width="880">
   </picture>
   <br><sub><b>Two-page view</b> lays out a PDF like an open book</sub>
 </p>
 
 <table>
   <tr>
-    <td align="center" width="33%"><img src="docs/media/reading-epub.png" alt="Reading an EPUB book in the compact window"><br><sub><b>Reading a book</b> at the default 420 × 620 size</sub></td>
-    <td align="center" width="33%"><img src="docs/media/hand-tool.png" alt="A PDF page zoomed to 140% with the hand tool switched on in the floating zoom controls"><br><sub><b>Zoom in</b>, then drag the page with the hand tool</sub></td>
+    <td align="center" width="33%"><img src="docs/media/reading-epub.png" alt="Reading an EPUB guide in the compact window"><br><sub><b>Reading a book</b> at the default 420 × 620 size</sub></td>
+    <td align="center" width="33%"><img src="docs/media/hand-tool.png" alt="A PDF page zoomed to 120% with the hand tool switched on in the floating zoom controls"><br><sub><b>Zoom in</b>, then drag the page with the hand tool</sub></td>
     <td align="center" width="33%"><img src="docs/media/appearance.png" alt="The Appearance panel with theme cards"><br><sub><b>Appearance</b>: hover to preview, click to keep</sub></td>
   </tr>
 </table>
@@ -240,8 +240,11 @@ picker that previews on hover shaped Hold My Brief's Appearance panel. The Graph
 the default palette in [Tern's published theme tokens](https://docs.stencil.so/tern/styles/variables.html).
 Thank you to the Stencil team.
 
-Sample text in the screenshots is from public-domain editions of *Pride and Prejudice* and
-*Alice's Adventures in Wonderland* via Project Gutenberg.
+The screenshots read two freely redistributable documents: *Photo-engraving*, a public-domain
+print manual scanned by the [Internet Archive](https://archive.org/details/photoengravingp00wilkgoog),
+and Adobe's Photoshop UXP guide, published under the Apache License 2.0. No in-copyright scans are
+committed to this repository. `scripts/reshoot-media.mjs` regenerates the set from documents you
+supply.
 
 ## License
 
