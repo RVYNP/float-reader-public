@@ -6,7 +6,31 @@
  * The token approach and theme design are inspired by Tern by Stencil (https://stencil.so/tern);
  * the Graphite family uses Tern's published default palette.
  */
-:root, [data-palette='lilac'] {
+:root, [data-palette='brief'] {
+  /* Hold My Brief — the brand family: warm paper, true ink, one acid accent.
+     Brief blue (#7ADBFE) is a marketing field colour and stays out of the UI. */
+  --chrome: light-dark(#f4f1ea, #14120f);
+  --surface: light-dark(#fbf9f4, #211e1a);
+  --card: light-dark(#ffffff, #26221d);
+  --paper: light-dark(#fbf9f4, #211e1a);
+  --ink: light-dark(#1a1815, #f4f1ea);
+  --fg: light-dark(#1a1815, #f4f1ea);
+  --muted: light-dark(#6e695e, #a39d8f);
+  --faint: light-dark(#b5ae9e, #5a554b);
+  --border: light-dark(#d8d2c4, #3a362f);
+  --hairline: light-dark(#e4dfd2, #2e2a24);
+  --hover: light-dark(#e9e3d6, #2b2721);
+  --stage: light-dark(#ede9df, #191613);
+  --track: light-dark(#cfc8b8, #453f36);
+  --accent: light-dark(#e13a3a, #ff6a5e);
+  --accent-ink: light-dark(#c62f2f, #ff8a80);
+  --accent-soft: light-dark(#fde9e4, #3a1e1a);
+  --accent-border: light-dark(#f3b3a8, #6e2b24);
+  --accent-fill: light-dark(#e13a3a, #d93a3a);
+  --scrim: light-dark(#1a18153d, #0000008c);
+  --search-hit: light-dark(#f2dfa0, #6b5620);
+}
+[data-palette='lilac'] {
   --chrome: light-dark(#e4e2e9, #17161c);
   --surface: light-dark(#fbfafc, #1e1d24);
   --card: light-dark(#ffffff, #24232b);
@@ -100,7 +124,12 @@
 /* Dim lowers glare within the active family: a page between chrome and surface, softer ink. */
 [data-page='dim'] { --paper: light-dark(color-mix(in srgb, var(--chrome) 55%, var(--surface)), color-mix(in srgb, var(--hover) 70%, var(--surface))); --ink: light-dark(color-mix(in srgb, var(--fg) 85%, var(--muted)), color-mix(in srgb, var(--fg) 70%, var(--muted))); }
 :root {
-  font-family: 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+  /* Brand type stack: Inter for the interface, JetBrains Mono for the machine voice
+     (folios, paths, positions). Both fall back to system faces so the app never
+     fetches a font and works offline. */
+  --font-ui: 'Inter', 'Segoe UI Variable', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Mono', Consolas, ui-monospace, monospace;
+  font-family: var(--font-ui);
   font-synthesis: none;
   font-size: 14px;
   color-scheme: light;
@@ -156,7 +185,7 @@ select:hover { border-color: var(--accent-border); }
 .toolbar { display: flex; align-items: center; gap: 4px; padding: 7px 8px; background: var(--chrome); flex-shrink: 0; }
 .title { min-width: 0; flex: 1; padding: 0 5px; }
 .title strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; font-size: 12px; }
-.title span { display: block; font: 10px/1.4 Consolas, monospace; color: var(--muted); margin-top: 2px; }
+.title span { display: block; font: 10px/1.4 var(--font-mono); color: var(--muted); margin-top: 2px; }
 .toolbar button { font-size: 12px; padding: 6px 7px; }
 .toolbar #open { border-color: var(--border); background: var(--surface); }
 .toolbar #open:hover { border-color: var(--accent-border); background: var(--accent-soft); }
@@ -167,13 +196,13 @@ select:hover { border-color: var(--accent-border); }
 #workspace { position: relative; flex: 1; min-height: 0; min-width: 0; margin: 0 6px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); overflow: hidden; }
 #empty { height: 100%; overflow: auto; padding: 36px 28px 24px; max-width: 640px; margin: auto; }
 .book-mark { display: grid; place-items: center; width: 42px; height: 42px; background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent-border); border-radius: 10px; }
-.eyebrow { font: 10px/1.5 Consolas, monospace !important; letter-spacing: 1.5px; color: var(--muted) !important; margin-top: 26px !important; }
+.eyebrow { font: 10px/1.5 var(--font-mono) !important; letter-spacing: 1.5px; color: var(--muted) !important; margin-top: 26px !important; }
 h1 { font-size: 34px; line-height: 1.15; font-weight: 550; letter-spacing: -.9px; margin: 12px 0 18px; color: var(--fg); }
 #empty > p { color: var(--muted); font-size: 13px; line-height: 1.65; }
 .primary { background: var(--accent-fill); color: var(--on-accent); padding: 11px 15px; font-weight: 600; }
 .primary:hover { background: var(--accent-fill-hover); }
 #empty-open { margin-top: 14px; display: flex; justify-content: space-between; gap: 24px; width: 100%; max-width: 320px; }
-#empty .formats { font: 9px/1.5 Consolas, monospace; letter-spacing: .7px; margin-top: 14px; color: var(--muted); }
+#empty .formats { font: 9px/1.5 var(--font-mono); letter-spacing: .7px; margin-top: 14px; color: var(--muted); }
 #preview-note { font-size: 11px !important; padding-top: 12px; border-top: 1px solid var(--border); }
 #recents { margin-top: 28px; }
 #recents h2 { font-size: 11px; font-weight: 600; color: var(--muted); }
@@ -181,7 +210,7 @@ h1 { font-size: 34px; line-height: 1.15; font-weight: 550; letter-spacing: -.9px
 .recent button:first-child { overflow: hidden; text-overflow: ellipsis; text-align: left; flex: 1; font-size: 12px; min-width: 0; }
 .recent button:last-child { flex: 0; color: var(--muted); }
 footer { position: relative; display: flex; gap: 4px; align-items: center; padding: 5px 10px 28px; background: var(--chrome); flex-shrink: 0; }
-#position { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; font: 11px/1.5 Consolas, monospace; color: var(--muted); font-variant-numeric: tabular-nums; }
+#position { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; font: 11px/1.5 var(--font-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
 #previous, #next { color: var(--muted); }
 #progress { position: absolute; bottom: 2px; left: 14px; width: calc(100% - 28px); height: 24px; margin: 0; padding: 0; appearance: none; background: transparent; cursor: pointer; --scrub-fill: 0%; }
 #progress::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(to right, var(--accent) var(--scrub-fill), var(--track) var(--scrub-fill)); }
@@ -211,7 +240,7 @@ footer { position: relative; display: flex; gap: 4px; align-items: center; paddi
 #view-controls button { display: grid; place-items: center; width: 28px; height: 26px; padding: 0; border-radius: 6px; color: var(--muted); }
 #view-controls button[aria-pressed=true] { color: var(--accent-ink); }
 #view-controls > button:disabled, #view-controls > button[aria-disabled=true] { opacity: calc(var(--idle) * .45); cursor: default; background: transparent; }
-#view-controls #zoom-level { width: 44px; color: var(--fg); font: 10px/1 Consolas, 'Cascadia Mono', monospace; font-variant-numeric: tabular-nums; }
+#view-controls #zoom-level { width: 44px; color: var(--fg); font: 10px/1 var(--font-mono); font-variant-numeric: tabular-nums; }
 #view-controls .view-group { display: flex; align-items: center; gap: 2px; }
 #view-controls .view-sep { width: 1px; height: 16px; background: var(--hairline); }
 /* Hand tool: drags pan the page instead of selecting text; links stay clickable. */
@@ -237,8 +266,8 @@ dialog select { padding-right: 28px; }
 .menu-grid button:nth-child(3), .menu-grid button:nth-child(7), .menu-grid button:nth-child(16) { border-bottom: 1px solid var(--border); border-radius: 0; padding-bottom: 12px; margin-bottom: 7px; }
 .menu-label { display: inline-flex; align-items: center; gap: 8px; }
 .menu-label svg { flex-shrink: 0; color: var(--accent-ink); }
-.menu-value { color: var(--muted); font: 10px/1.4 Consolas, monospace; white-space: nowrap; }
-kbd { color: var(--muted); background: var(--stage); border: 1px solid var(--border); border-radius: 3px; padding: 1px 4px; font: 10px/1.4 Consolas, monospace; white-space: nowrap; }
+.menu-value { color: var(--muted); font: 10px/1.4 var(--font-mono); white-space: nowrap; }
+kbd { color: var(--muted); background: var(--stage); border: 1px solid var(--border); border-radius: 3px; padding: 1px 4px; font: 10px/1.4 var(--font-mono); white-space: nowrap; }
 #outline-list { display: flex; flex-direction: column; gap: 3px; }
 #outline-list button { text-align: left; white-space: normal; font-size: 13px; }
 dl { display: grid; grid-template-columns: 1fr auto; gap: 12px 8px; font-size: 11px; }
@@ -254,7 +283,7 @@ dd { margin: 0; color: var(--muted); }
 .sheet-close { display: grid; place-items: center; width: 24px; height: 24px; padding: 0; color: var(--muted); }
 #appearance .appearance-hint { margin: -9px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
 #appearance .appearance-hint[data-previewing] { color: var(--accent-ink); }
-.sheet-label { color: var(--muted); font: 10px/1.4 Consolas, monospace; letter-spacing: .6px; }
+.sheet-label { color: var(--muted); font: 10px/1.4 var(--font-mono); letter-spacing: .6px; }
 .segmented { display: flex; gap: 2px; padding: 2px; background: var(--stage); border: 1px solid var(--hairline); border-radius: 8px; }
 .segmented button { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 0; padding: 5px 6px; border-radius: 6px; color: var(--muted); font-size: 12px; }
 .segmented button:hover { background: var(--hover); color: var(--fg); }
@@ -287,7 +316,7 @@ dd { margin: 0; color: var(--muted); }
 .swatch-custom { border: 1px solid var(--border); color: var(--muted); }
 .swatch-custom[aria-checked=true] { border-width: 1.5px; }
 .swatch-custom[aria-checked=true] svg, .swatch-custom:not([aria-checked=true]) > span { display: none; }
-#appearance .appearance-note { margin: 0; color: var(--muted); font: 9px/1.4 Consolas, monospace; letter-spacing: .2px; }
+#appearance .appearance-note { margin: 0; color: var(--muted); font: 9px/1.4 var(--font-mono); letter-spacing: .2px; }
 @media (min-width: 720px) {
   #appearance { width: 460px; margin-inline: auto; border: 1px solid var(--border); border-bottom: 0; }
 }

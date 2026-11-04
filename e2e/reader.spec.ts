@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 test('compact text workflow, semantic resume, invalid replacement preserves document', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'A little room to read.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Hand it over.' })).toBeVisible();
   const text = Array.from({ length: 240 }, (_, i) => `Line ${i + 1}: A quiet place to read, beside the work in progress.`).join('\n');
   const file = { name: 'reading.txt', mimeType: 'text/plain', buffer: Buffer.from(text) };
   await page.locator('#file-input').setInputFiles(file);
@@ -50,7 +50,7 @@ test('appearance previews on hover, keeps on click, restores on Escape and persi
   await sheet.getByRole('radio', { name: 'Arctic' }).hover();
   await expect(root).toHaveAttribute('data-palette', 'arctic');
   await page.keyboard.press('Escape');
-  await expect(root).toHaveAttribute('data-palette', 'lilac');
+  await expect(root).toHaveAttribute('data-palette', 'brief');
   await expect(sheet).toBeVisible();
   await sheet.getByRole('radio', { name: 'Birch' }).click();
   await sheet.getByRole('radio', { name: 'Light' }).click();

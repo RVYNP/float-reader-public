@@ -733,7 +733,7 @@ fn main() {
         })
         .on_window_event(|window, event| windows::handle_event(window, event))
         .build(tauri::generate_context!())
-        .expect("Could not start Float Reader")
+        .expect("Could not start Hold My Brief")
         .run(|app, event| {
             if matches!(event, tauri::RunEvent::Exit) {
                 if let Some(shared) = app.try_state::<Shared>() {

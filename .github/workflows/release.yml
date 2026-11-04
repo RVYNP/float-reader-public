@@ -1,4 +1,4 @@
-# Release builds for Float Reader.
+# Release builds for Hold My Brief.
 #
 # Pushing a tag such as v0.1.0 builds the Windows installer, a portable Windows
 # zip and an Apple silicon .dmg, then opens a DRAFT GitHub Release with those
@@ -123,14 +123,14 @@ jobs:
           $out = New-Item -ItemType Directory -Force -Path release-assets
           $setup = @(Get-ChildItem -Path src-tauri/target/release/bundle/nsis -Filter '*-setup.exe')
           if ($setup.Count -ne 1) { throw "Expected one NSIS installer, found $($setup.Count)." }
-          Copy-Item -LiteralPath $setup[0].FullName -Destination (Join-Path $out "Float-Reader-$env:VERSION-windows-x64-setup.exe")
+          Copy-Item -LiteralPath $setup[0].FullName -Destination (Join-Path $out "Hold-My-Brief-$env:VERSION-windows-x64-setup.exe")
 
-          $stage = New-Item -ItemType Directory -Force -Path 'portable/Float Reader'
-          Copy-Item -LiteralPath src-tauri/target/release/float-reader.exe -Destination (Join-Path $stage 'Float Reader.exe')
+          $stage = New-Item -ItemType Directory -Force -Path 'portable/Hold My Brief'
+          Copy-Item -LiteralPath src-tauri/target/release/hold-my-brief.exe -Destination (Join-Path $stage 'Hold My Brief.exe')
           $loader = 'src-tauri/target/release/WebView2Loader.dll'
           if (Test-Path -LiteralPath $loader) { Copy-Item -LiteralPath $loader -Destination $stage }
           Copy-Item -LiteralPath LICENSE -Destination $stage -ErrorAction SilentlyContinue
-          Compress-Archive -Path $stage -DestinationPath (Join-Path $out "Float-Reader-$env:VERSION-windows-x64-portable.zip")
+          Compress-Archive -Path $stage -DestinationPath (Join-Path $out "Hold-My-Brief-$env:VERSION-windows-x64-portable.zip")
           Get-ChildItem $out | Format-Table Name, Length
 
       - uses: actions/upload-artifact@v4
@@ -181,13 +181,13 @@ jobs:
             exit 1
           fi
           mkdir -p release-assets
-          out="release-assets/Float-Reader-$VERSION-macos-arm64.dmg"
+          out="release-assets/Hold-My-Brief-$VERSION-macos-arm64.dmg"
           cp "${dmgs[0]}" "$out"
 
           mnt=$(mktemp -d)
           hdiutil attach -nobrowse -readonly -mountpoint "$mnt" "$out"
           trap 'hdiutil detach "$mnt" -quiet || true' EXIT
-          app="$mnt/Float Reader.app"
+          app="$mnt/Hold My Brief.app"
           codesign --verify --deep --strict --verbose=2 "$app"
           exe=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app/Contents/Info.plist")
           lipo -archs "$app/Contents/MacOS/$exe" | grep -qw arm64
@@ -219,12 +219,12 @@ jobs:
         working-directory: release-assets
         run: |
           set -euo pipefail
-          for f in "Float-Reader-$VERSION-windows-x64-setup.exe" \
-                   "Float-Reader-$VERSION-windows-x64-portable.zip" \
-                   "Float-Reader-$VERSION-macos-arm64.dmg"; do
+          for f in "Hold-My-Brief-$VERSION-windows-x64-setup.exe" \
+                   "Hold-My-Brief-$VERSION-windows-x64-portable.zip" \
+                   "Hold-My-Brief-$VERSION-macos-arm64.dmg"; do
             [[ -f "$f" ]] || { echo "::error::Missing release file $f"; exit 1; }
           done
-          sha256sum Float-Reader-* > SHA256SUMS.txt
+          sha256sum Hold-My-Brief-* > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
       - name: Render the release notes
@@ -238,7 +238,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Float-Reader-${{ needs.prepare.outputs.version }}-release
+          name: Hold-My-Brief-${{ needs.prepare.outputs.version }}-release
           path: |
             release-assets/*
             RELEASE_NOTES.md
@@ -260,7 +260,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: Float-Reader-${{ needs.prepare.outputs.version }}-release
+          name: Hold-My-Brief-${{ needs.prepare.outputs.version }}-release
           path: dist
 
       # Re-running the workflow for the same tag refreshes the files of an
@@ -279,7 +279,7 @@ jobs:
           else
             gh release create "$TAG" "${files[@]}" \
               --draft --verify-tag \
-              --title "Float Reader $VERSION" \
+              --title "Hold My Brief $VERSION" \
               --notes-file dist/RELEASE_NOTES.md
           fi
           echo "Draft release: $(gh release view "$TAG" --json url --jq .url)"

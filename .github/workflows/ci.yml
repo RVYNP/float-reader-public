@@ -1,10 +1,10 @@
-# Cross-platform CI for Float Reader.
+# Cross-platform CI for Hold My Brief.
 #
 # The point of this file is that the SAME suite runs on Windows and macOS. That
 # matters because the app is a Tauri desktop app whose webview is different on
 # every OS (WebView2/Chromium on Windows, WKWebView on macOS), and because the
 # test harness used to be Windows-only: playwright.config.ts hardcoded
-# channel 'msedge' and the smoke scripts hardcoded dist/Float Reader.exe.
+# channel 'msedge' and the smoke scripts hardcoded dist/Hold My Brief.exe.
 #
 # No secrets are used and nothing is published. Each job only builds and tests;
 # the unsigned Windows installer is kept as a short-lived workflow artifact.
@@ -108,12 +108,12 @@ jobs:
         run: |
           $key = 'HKLM:\SOFTWARE\Policies\Microsoft\Edge\WebView2\AdditionalBrowserArguments'
           New-Item -Path $key -Force | Out-Null
-          New-ItemProperty -Path $key -Name 'float-reader.exe' -Value '--remote-debugging-port=19126' -PropertyType String -Force | Out-Null
+          New-ItemProperty -Path $key -Name 'hold-my-brief.exe' -Value '--remote-debugging-port=19126' -PropertyType String -Force | Out-Null
 
       - name: Native smoke test (WebView2)
         if: runner.os == 'Windows'
         env:
-          FLOAT_READER_BINARY: src-tauri/target/release/float-reader.exe
+          HOLD_MY_BRIEF_BINARY: src-tauri/target/release/hold-my-brief.exe
         run: npm run test:native
 
       # The Windows deliverable: tauri.windows.conf.json narrows bundling to NSIS.
@@ -125,7 +125,7 @@ jobs:
         if: runner.os == 'Windows'
         uses: actions/upload-artifact@v4
         with:
-          name: float-reader-windows-nsis
+          name: hold-my-brief-windows-nsis
           path: src-tauri/target/release/bundle/nsis/*.exe
           if-no-files-found: error
           retention-days: 14

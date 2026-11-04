@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds Float Reader for macOS and assembles dist/Float Reader.app (and a .dmg
+# Builds Hold My Brief for macOS and assembles dist/Hold My Brief.app (and a .dmg
 # when the bundler can produce one). The Windows counterpart of this script is
 # build-native.ps1.
 #
@@ -26,23 +26,23 @@ cd src-tauri
 cargo build --release --locked --offline --features custom-protocol
 cd ..
 
-APP="$WORKSPACE/dist/Float Reader.app"
+APP="$WORKSPACE/dist/Hold My Brief.app"
 BUNDLE_DIR="$CARGO_TARGET_DIR/release/bundle"
 
 echo "==> Bundle"
 # The bundler re-runs the Rust build it already has cached and writes the .app.
 # A .dmg needs hdiutil mounts that some sandboxes refuse, so it is best effort.
-if npx tauri build --bundles app,dmg --no-sign 2>&1 | tee /tmp/float-reader-bundle.log; then
+if npx tauri build --bundles app,dmg --no-sign 2>&1 | tee /tmp/hold-my-brief-bundle.log; then
     :
-elif grep -qi "bundle_dmg\|hdiutil\|dmg" /tmp/float-reader-bundle.log; then
+elif grep -qi "bundle_dmg\|hdiutil\|dmg" /tmp/hold-my-brief-bundle.log; then
     echo "==> .dmg bundling is unavailable here; retrying with the .app only" >&2
     npx tauri build --bundles app --no-sign
 else
-    echo "==> Bundling failed; see /tmp/float-reader-bundle.log" >&2
+    echo "==> Bundling failed; see /tmp/hold-my-brief-bundle.log" >&2
     exit 1
 fi
 
-BUILT="$BUNDLE_DIR/macos/Float Reader.app"
+BUILT="$BUNDLE_DIR/macos/Hold My Brief.app"
 if [[ ! -d "$BUILT" ]]; then
     echo "error: the bundler did not produce $BUILT" >&2
     exit 1

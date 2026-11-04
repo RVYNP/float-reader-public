@@ -1,12 +1,12 @@
-# Float Reader user guide
+# Hold My Brief user guide
 
-Everything Float Reader does, in detail. For a quick tour, see the [README](../README.md).
+Everything Hold My Brief does, in detail. For a quick tour, see the [README](../README.md).
 
 ## Opening documents
 
 Open a PDF, DRM-free EPUB, Markdown, TXT or image file (PNG, JPEG, WebP, GIF, AVIF, BMP) with
 **Open**, Ctrl+O, a single-file drop or a command-line file argument. The Windows installer adds
-Float Reader to Explorer's **Open with** list for the document formats without changing the default
+Hold My Brief to Explorer's **Open with** list for the document formats without changing the default
 app; clean-account installer behavior has not yet been verified. A second instance routes its file
 request to the running app.
 
@@ -22,10 +22,10 @@ contents, Go to, Back and a shortcut reference.
 Open the menu and choose **Appearance…** to open the Appearance panel at the bottom of the window.
 
 - **Mode:** System (default; follows the operating system as it changes), Light or Dark.
-- **Theme:** Lilac (default), Birch, Graphite or Arctic. Each has a light and a dark version.
+- **Theme:** Brief (default), Lilac, Birch, Graphite or Arctic. Each has a light and a dark version.
   Hover over or focus a theme to preview it on the whole window, click or press Enter to keep it, and
   move away or press Escape to go back to the theme you kept.
-- **Accent:** the theme's own accent, one of six presets, or a custom color. Contrast is adjusted
+- **Accent:** the theme's own accent, one of seven presets, or a custom color. Contrast is adjusted
   automatically so text and controls stay readable.
 - **Page:** Match theme, White, Sepia or Dim for text documents (Markdown, TXT and reflowable EPUB).
   PDF pages, fixed-layout EPUB pages and images always keep their original colors.
@@ -127,25 +127,36 @@ library.
 ## Saved reading data
 
 Saved reading data lives in the native per-user local application-data directory under
-`io.github.rvynp.floatreader` (on macOS, `~/Library/Application Support/io.github.rvynp.floatreader`),
+`xyz.rpayton.holdmybrief` (on macOS, `~/Library/Application Support/xyz.rpayton.holdmybrief`),
 not beside the source documents. Identical file bytes share resume state even after a rename.
 Changed revisions keep the previous revision's state and show a best-effort restoration message. The
 menu separately clears recents and saved reading data; neither deletes documents.
 
+> **Renamed from Float Reader.** Before the rename the bundle identifier was
+> `io.github.rvynp.floatreader`, so Float Reader builds kept their data in a folder of that name.
+> The identifier changed to `xyz.rpayton.holdmybrief` with the rename, and data from the old
+> folder is **not migrated**: the first Hold My Brief launch starts with an empty library and no
+> saved positions. The old folder is left untouched and can be deleted by hand once you no longer
+> need it.
+
 ## Document library
 
-Use the sidebar button at the left of the toolbar, or **Ctrl+B**, to open the library. At widths of
-720 pixels and above it sits beside the reading panel; in compact windows it overlays the panel and
-closes after you open a document. Escape dismisses it. Wide and compact visibility preferences are
-remembered separately.
+Use the sidebar button at the left of the toolbar, or **Ctrl+B**, to open the library. It opens as a
+drawer that floats over the reading panel at every width, so opening, closing, resizing or moving it
+never changes the page's size, zoom or place. Escape closes the drawer while focus is inside it. Wide
+and compact visibility preferences are remembered separately.
 
-In the side-by-side layout, drag the divider between the library and the reading panel to resize the
-library (240–520 pixels, never more than 55% of the window, and always leaving the reading panel at
-least 320 pixels). Double-click the divider to reset it to 270 pixels. The divider is also
-focusable: Left and Right resize by 16 pixels (Shift: 64), Home and End jump to the narrowest and
-widest sizes, and Enter resets. The page refits once when you release the divider. The header button
-beside **×** moves the library to the other side of the reading panel; the compact overlay follows
-the same side. Width and side are remembered, and the width is re-fitted when the window shrinks.
+Drag the divider between the drawer and the page to resize the drawer (240–520 pixels, and never more
+than 55% of the window, which keeps at least 320 pixels of the reading panel clear beside it). Because
+the drawer floats over the page, a wider drawer covers more of the page. Double-click the divider to
+reset it to 270 pixels. The divider is also focusable: Left and Right resize by 16 pixels
+(Shift: 64), Home and End jump to the narrowest and widest sizes, and Enter resets. The header button
+beside **×** moves the drawer to the other side of the reading panel; compact windows follow the same
+side. Width and side are remembered, and the width is re-fitted when the window shrinks.
+
+In compact windows (below 720 pixels) the drawer covers the reading panel behind a scrim, cannot be
+resized, and closes on a click outside it or after you open a document from it. Escape closes it
+while focus is inside the drawer.
 
 - **Add files** selects several documents or images at once without opening them. Select a
   collection first to add new entries directly to it.
@@ -176,7 +187,7 @@ reload; removing a browser library entry removes only that cached copy, not the 
 
 ## Privacy and safety
 
-Float Reader never changes your documents, has no account, sends no analytics and needs no internet
+Hold My Brief never changes your documents, has no account, sends no analytics and needs no internet
 connection. Document scripts and automatic external-resource requests are blocked; EPUB content runs
 in a sandbox without script permission; Markdown raw HTML is disabled; local images load only from
 inside the opened document's folder. A web link opens in your browser only when you click it.

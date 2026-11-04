@@ -1,22 +1,26 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/media/hero-dark.png">
-    <img src="docs/media/hero-light.png" alt="Float Reader pinned beside other work, showing the first chapter of Pride and Prejudice in a small reading window" width="880">
+    <img src="docs/media/hero-light.png" alt="Hold My Brief open beside other work, showing a page of a 19th century print manual in a small reading window" width="880">
   </picture>
 </p>
 
-<h1 align="center">Float Reader</h1>
+<p align="center">
+  <img src="docs/media/wordmark.png" alt="Hold My Brief wordmark" width="880">
+</p>
+
+<h1 align="center">Hold My Brief</h1>
 
 <p align="center">
-  <b>A little room to read.</b><br>
+  <b>A reader that holds.</b><br>
   A small reading window that stays on top of your work and remembers exactly where you left off.
 </p>
 
 <p align="center">
-  <img alt="Windows and macOS" src="https://img.shields.io/badge/Windows%20%C2%B7%20macOS-desktop-6358d8?style=flat-square">
-  <img alt="Light and dark themes" src="https://img.shields.io/badge/themes-light%20%C2%B7%20dark-6358d8?style=flat-square">
-  <img alt="No accounts, no tracking" src="https://img.shields.io/badge/private-no%20accounts%20%C2%B7%20no%20tracking-6358d8?style=flat-square">
-  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-6358d8?style=flat-square"></a>
+  <img alt="Windows and macOS" src="https://img.shields.io/badge/Windows%20%C2%B7%20macOS-desktop-1A1815?style=flat-square">
+  <img alt="Light and dark themes" src="https://img.shields.io/badge/themes-light%20%C2%B7%20dark-1A1815?style=flat-square">
+  <img alt="No accounts, no tracking" src="https://img.shields.io/badge/private-no%20accounts%20%C2%B7%20no%20tracking-1A1815?style=flat-square">
+  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-FA4848?style=flat-square"></a>
 </p>
 
 <p align="center">
@@ -31,10 +35,14 @@ Reading something *while* you work (a spec beside a design file, a paper beside 
 second screen) usually means juggling a full-size viewer: switching windows, resizing, scrolling to
 find your place again.
 
-Float Reader is a pocket-sized window built for that. Pin it above everything else, lock its size so
+Hold My Brief is a pocket-sized window built for that. Pin it above everything else, lock its size so
 it never gets in the way, and pick up on the same passage tomorrow. It opens the formats people
 actually read (PDF, EPUB books, Markdown, plain text and images), and your files never leave your
 computer.
+
+> **Note:** Hold My Brief was previously developed under the name **Float Reader**. The rename
+> moves the application-data folder (see the [user guide](docs/user-guide.md#saved-reading-data));
+> saved reading positions and libraries from Float Reader builds are not migrated.
 
 ## What it does
 
@@ -68,11 +76,12 @@ computer.
     <td valign="top">
       <h3>A library for your references</h3>
       Collect documents into collections, star favorites, search, or point it at a folder of PDFs.
-      Make it wider or narrower and keep it on either side. It never copies or moves your files.
+      It opens as a drawer over the page: widen it, narrow it or move it to either side without the
+      page ever moving. It never copies or moves your files.
     </td>
     <td valign="top">
       <h3>Fits your space</h3>
-      Light and dark modes that follow your system, four calm theme families, your own accent
+      Light and dark modes that follow your system, five theme families (Brief by default), your own accent
       color, and a page tone for text. Hover a theme to preview it on the whole window.
     </td>
   </tr>
@@ -83,15 +92,15 @@ computer.
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/media/spread-dark.png">
-    <img src="docs/media/spread-light.png" alt="Pages 2 and 3 of Alice's Adventures in Wonderland shown side by side as an open book" width="880">
+    <img src="docs/media/spread-light.png" alt="Pages 48 and 49 of the print manual shown side by side as an open book" width="880">
   </picture>
   <br><sub><b>Two-page view</b> lays out a PDF like an open book</sub>
 </p>
 
 <table>
   <tr>
-    <td align="center" width="33%"><img src="docs/media/reading-epub.png" alt="Reading an EPUB book in the compact window"><br><sub><b>Reading a book</b> at the default 420 × 620 size</sub></td>
-    <td align="center" width="33%"><img src="docs/media/hand-tool.png" alt="A PDF page zoomed to 140% with the hand tool switched on in the floating zoom controls"><br><sub><b>Zoom in</b>, then drag the page with the hand tool</sub></td>
+    <td align="center" width="33%"><img src="docs/media/reading-epub.png" alt="Reading an EPUB guide in the compact window"><br><sub><b>Reading a book</b> at the default 420 × 620 size</sub></td>
+    <td align="center" width="33%"><img src="docs/media/hand-tool.png" alt="A PDF page zoomed to 120% with the hand tool switched on in the floating zoom controls"><br><sub><b>Zoom in</b>, then drag the page with the hand tool</sub></td>
     <td align="center" width="33%"><img src="docs/media/appearance.png" alt="The Appearance panel with theme cards"><br><sub><b>Appearance</b>: hover to preview, click to keep</sub></td>
   </tr>
 </table>
@@ -99,22 +108,22 @@ computer.
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/media/library-dark.png">
-    <img src="docs/media/library-light.png" alt="The document library beside a PDF in a wide window" width="880">
+    <img src="docs/media/library-light.png" alt="The document library floating over a PDF, with the page unreduced behind it" width="880">
   </picture>
-  <br><sub><b>The library</b> opens beside the page in wider windows, on whichever side you prefer</sub>
+  <br><sub><b>The library</b> floats over the page. Put it on either side and the page keeps its place</sub>
 </p>
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/media/library-resize-dark.gif">
-    <img src="docs/media/library-resize-light.gif" alt="Dragging the divider makes the library wider and the page refits; a double-click puts it back" width="720">
+    <source media="(prefers-color-scheme: dark)" srcset="docs/media/library-resize-dark.png">
+    <img src="docs/media/library-resize-light.png" alt="Dragging the divider makes the library wider while the page stays exactly where it is; a double-click puts it back" width="880">
   </picture>
-  <br><sub><b>Make room</b>: drag the divider and the page refits when you let go; double-click to reset</sub>
+  <br><sub><b>Make it wider</b>: drag the divider and the drawer grows over the page; double-click to reset</sub>
 </p>
 
 <p align="center">
-  <img src="docs/media/themes.png" alt="The same page in the Lilac, Birch, Graphite and Arctic themes, light and dark" width="880">
-  <br><sub><b>Four theme families</b>, each in light and dark</sub>
+  <img src="docs/media/themes.png" alt="The same page in the Brief, Lilac, Birch, Graphite and Arctic themes, light and dark" width="880">
+  <br><sub><b>Five theme families</b>, each in light and dark. Brief is the default</sub>
 </p>
 
 ## Private by design
@@ -127,7 +136,7 @@ computer.
 
 ## How it was made
 
-Float Reader was planned before it was built, and every claim about it is backed by a test or a
+Hold My Brief was planned before it was built, and every claim about it is backed by a test or a
 measurement.
 
 ```mermaid
@@ -148,7 +157,7 @@ flowchart LR
 | **Measure** | A [performance pass](docs/floating-reader-performance.md) that halved PDF time-to-first-page (248 → 128 ms) and made flipping back and forth through 120 pages 16× faster (2,000 → 122 ms). |
 
 The [implementation status](docs/floating-reader-implementation.md) separates what is verified
-from what isn't yet. Float Reader is a working release candidate, not a finished 1.0. Open items
+from what isn't yet. Hold My Brief is a working release candidate, not a finished 1.0. Open items
 such as screen-reader testing and very large files are listed there, not glossed over.
 
 ## Download
@@ -159,18 +168,18 @@ sign up for.
 
 | Your computer | File to download |
 | --- | --- |
-| **Windows** (64-bit) | `Float-Reader-0.1.0-windows-x64-setup.exe` installs it just for you, no administrator needed. Prefer not to install? Unzip `Float-Reader-0.1.0-windows-x64-portable.zip` anywhere and run **Float Reader.exe**. |
-| **Mac** with Apple silicon (M1 or later) | `Float-Reader-0.1.0-macos-arm64.dmg`. There's no version for Intel Macs yet. |
+| **Windows** (64-bit) | `Hold-My-Brief-0.1.0-windows-x64-setup.exe` installs it just for you, no administrator needed. Prefer not to install? Unzip `Hold-My-Brief-0.1.0-windows-x64-portable.zip` anywhere and run **Hold My Brief.exe**. |
+| **Mac** with Apple silicon (M1 or later) | `Hold-My-Brief-0.1.0-macos-arm64.dmg`. There's no version for Intel Macs yet. |
 
 The version number in each file name changes with every release. To check a download, compare it
 with `SHA256SUMS.txt` on the same page.
 
-**The first time you open it.** Float Reader isn't code-signed yet, so your computer asks you to
+**The first time you open it.** Hold My Brief isn't code-signed yet, so your computer asks you to
 confirm once:
 
 - **Windows:** if a blue "Windows protected your PC" screen appears, choose **More info**, then
   **Run anyway**.
-- **Mac:** open the `.dmg` and drag Float Reader to Applications. The first time you open it, macOS
+- **Mac:** open the `.dmg` and drag Hold My Brief to Applications. The first time you open it, macOS
   says it can't verify the developer.
   - On macOS 15 (Sequoia) or later, click **Done**, open **System Settings › Privacy & Security**,
     scroll down and click **Open Anyway**.
@@ -201,16 +210,42 @@ npm run dev         # or try the interface in a browser
 | [Requirements](docs/floating-reader-prd.md) · [Research](docs/floating-reader-research-2026-10-22.md) | Why it works the way it does |
 | [Status](docs/floating-reader-implementation.md) · [Performance](docs/floating-reader-performance.md) · [macOS audit](docs/floating-reader-macos-and-performance-audit.md) | What's verified, what's measured, what's next |
 
+## Brand
+
+The identity is deliberately plain: **the mark is the name, set once.** An acid period is the only
+colour move, and everything else is paper, ink and white space.
+
+| | |
+| --- | --- |
+| **Mark** | *Hmb.* in Inter Bold (capped at 700, never heavier), capital H, acid period |
+| **Colour** | Warm paper `#F4F1EA` · true ink `#1A1815` · one acid accent `#E13A3A`, used once per composition |
+| **Brief blue** | `#7ADBFE` floods fields (posters, covers, the icon) and stays out of the interface |
+| **Type** | Inter for the interface, JetBrains Mono for the machine voice: positions, paths, statuses |
+| **Motion** | Slow enough to feel expensive: clip settles at 340 ms, ribbon marks in 500 ms, dither resolves in 900 ms |
+
+The **Brief** theme family ships all of this as the app's default appearance, and the app icon is
+the mark itself. Colour, type and motion are documented in full in the brand guidelines that
+accompany this project.
+
+**Fonts are not bundled.** The interface asks for Inter and JetBrains Mono, then falls back to the
+system faces your computer already has. Nothing is downloaded to render the UI, which keeps the
+promise that the app works offline and never phones home. Install Inter and JetBrains Mono if you
+want the interface set exactly as designed.
+
 ## Credits
 
 The look and theme system are inspired by [Tern](https://stencil.so/tern) by
 [Stencil](https://stencil.so). Its quiet, airy styling, its light/dark design tokens and its theme
-picker that previews on hover shaped Float Reader's Appearance panel. The Graphite theme follows
+picker that previews on hover shaped Hold My Brief's Appearance panel. The Graphite theme follows
 the default palette in [Tern's published theme tokens](https://docs.stencil.so/tern/styles/variables.html).
 Thank you to the Stencil team.
 
-Sample text in the screenshots is from public-domain editions of *Pride and Prejudice* and
-*Alice's Adventures in Wonderland* via Project Gutenberg.
+The screenshots read freely redistributable documents: *Photo-engraving*, a public-domain print
+manual scanned by the [Internet Archive](https://archive.org/details/photoengravingp00wilkgoog);
+Adobe's Photoshop UXP guide, published under the Apache License 2.0; and, for the theme sheet,
+the public-domain opening of *Pride and Prejudice*. No in-copyright scans are committed to this
+repository. `scripts/reshoot-media.mjs` regenerates the set from documents you supply, and the
+hero image is composed from those shots in the design file.
 
 ## License
 

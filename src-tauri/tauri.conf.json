@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Float Reader",
+  "productName": "Hold My Brief",
   "version": "0.1.0",
-  "identifier": "io.github.rvynp.floatreader",
+  "identifier": "xyz.rpayton.holdmybrief",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://127.0.0.1:1420",
@@ -13,7 +13,7 @@
     "withGlobalTauri": false,
     "windows": [{
       "label": "main",
-      "title": "Float Reader",
+      "title": "Hold My Brief",
       "width": 420,
       "height": 620,
       "visible": false,
@@ -32,8 +32,8 @@
     "icon": ["icons/icon.png", "icons/icon.icns", "icons/icon.ico"],
     "fileAssociations": [{
       "ext": ["pdf", "epub", "md", "markdown", "txt"],
-      "name": "Reading document",
-      "description": "Open this document in Float Reader",
+      "name": "Hold My Brief document",
+      "description": "Open this document in Hold My Brief",
       "role": "Viewer"
     }],
     "windows": { "nsis": { "installMode": "currentUser" } }

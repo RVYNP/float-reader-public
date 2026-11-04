@@ -1,4 +1,4 @@
-# Float Reader: performance audit and macOS port
+# Hold My Brief: performance audit and macOS port
 
 Review of [`RVYNP/float-reader-public`](https://github.com/RVYNP/float-reader-public) at the
 snapshot in `float-reader-public-main/`, covering (1) what limits performance today and (2) what
@@ -36,7 +36,7 @@ defects were in build configuration and one window-geometry calculation.
 ### Result
 
 - `cargo build`, `cargo test` and `npx tauri build` all succeed on macOS.
-- `dist/Float Reader.app` is produced by `npm run package:macos`, which pins
+- `dist/Hold My Brief.app` is produced by `npm run package:macos`, which pins
   `CARGO_HOME`/`CARGO_TARGET_DIR` to workspace-local directories and builds offline. The `.dmg`
   step is attempted as well but **fails here** because `hdiutil create` is denied by this sandbox;
   the script detects that, falls back to `.app`-only, and still delivers a signed bundle. Expect
@@ -50,7 +50,7 @@ defects were in build configuration and one window-geometry calculation.
 
 This machine runs a **headless session without TCC automation permission**: `osascript`/System
 Events fails with `-10004`, so window enumeration is unavailable. Screen capture and process
-inspection *do* work (`screencapture -x` writes a valid PNG, `pgrep -f float-reader` lists PIDs),
+inspection *do* work (`screencapture -x` writes a valid PNG, `pgrep -f hold-my-brief` lists PIDs),
 so liveness and clean-exit were checked directly rather than inferred.
 
 The build sandbox also denies writes outside the project directory, so
@@ -62,7 +62,7 @@ So the app could not be verified **visually**, and its persisted state could not
 What was verified:
 
 - `cargo build`, `cargo test` and the Tauri bundler succeed, producing a **9.5 MB arm64 `.app`**
-  with a valid `Info.plist` (`io.github.rvynp.floatreader`), a generated `.icns`, and an ad-hoc
+  with a valid `Info.plist` (`xyz.rpayton.holdmybrief`), a generated `.icns`, and an ad-hoc
   signature that passes `codesign -dv`.
 - The binary **launches with a file argument and stays alive**, with **no Rust panic and no crash
   report**, re-checked with no other instance running — `tauri-plugin-single-instance` makes a
@@ -74,7 +74,7 @@ What was verified:
 Window contents, first-run state persistence, DPI behaviour, pin/always-on-top stacking and
 Narrator/VoiceOver reading order remain **unverified** and still listed as release gates in
 `docs/floating-reader-implementation.md`. To finish these checks, run `npm run package:macos` on a
-Mac with a normal desktop session and open `dist/Float Reader.app`.
+Mac with a normal desktop session and open `dist/Hold My Brief.app`.
 
 ---
 
