@@ -79,10 +79,23 @@ pixels (or, for reflowable EPUB, taller than wide), pages show one at a time; th
 the subtitle explain that two-page view is waiting for more width, and it returns as soon as the
 panel is wide enough.
 
+### Command palette
+
+**Ctrl+K** opens a search field over every reader action, so you can run something without finding it
+in the menu. Start typing to filter: matching is forgiving, so `zoom` finds the four zoom commands
+through their other names and `fit pa` finds **Fit page**. Arrow keys move the highlight, Enter runs
+the highlighted command and Escape closes the palette.
+
+Commands that need a document open, or the desktop app for pin and size lock, are listed but marked
+with the reason they cannot run yet. With a document open the palette is the quickest route to Go to,
+Contents, appearance and window presets; from the empty screen it still reaches **Open file** and the
+library.
+
 ### Keyboard shortcuts
 
 | Action | Shortcut |
 | --- | --- |
+| Search commands (command palette) | Ctrl+K |
 | Next / previous page | PgDn / PgUp (Right / Left in page mode) |
 | Next / previous screen | Space / Shift+Space |
 | First / last location | Home / End |

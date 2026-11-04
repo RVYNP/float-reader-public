@@ -3,6 +3,8 @@ import { defaultOptions, type Position, type ReaderAdapter, type ReaderOptions }
 import { desktop, native, state, browserFile, persist, openExternal, confirmDocument, openLibraryDocument, chooseDocument, imageFormats, type Opened, type WindowState } from './bridge';
 import { createLibrary } from './library';
 import { ImageAdapter } from './adapters/image';
+import { createPalette } from './palette';
+import { COMMANDS, shortcutFor, unavailableReason } from './commands';
 import { initAppearance } from './theme';
 import { appearanceSummary, createAppearanceSheet, paletteIcon } from './appearance';
 import { Panner } from './pan';
@@ -34,7 +36,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <dialog id="contents"><div class="dialog-head"><h2>Contents</h2><button data-close aria-label="Close contents">×</button></div><div id="outline-list"></div></dialog>
   <dialog id="typography"><div class="dialog-head"><h2>Reading settings</h2><button data-close aria-label="Close settings">×</button></div><label>Text size <input id="font-size" type="number" min="12" max="40" value="18"></label><label>Line spacing <select id="line-height"><option>1.4</option><option selected>1.65</option><option>1.9</option><option>2.2</option></select></label><label>Margins <select id="margin"><option value="12">Narrow</option><option value="24" selected>Comfortable</option><option value="40">Wide</option></select></label><label class="check"><input id="wrap" type="checkbox" checked>Wrap plain text</label></dialog>
   <dialog id="appearance"></dialog>
-  <dialog id="shortcuts"><div class="dialog-head"><h2>Keyboard shortcuts</h2><button data-close aria-label="Close shortcuts">×</button></div><dl><dt>Next / previous page</dt><dd>PgDn / PgUp</dd><dt>Page mode navigation</dt><dd>Right / Left</dd><dt>Next / previous screen</dt><dd>Space / Shift Space</dd><dt>Scroll</dt><dd>Up / Down</dd><dt>First / last location</dt><dd>Home / End</dd><dt>Go to location</dt><dd>Ctrl G</dd><dt>Back after a jump</dt><dd>Alt Left</dd><dt>Open file</dt><dd>Ctrl O</dd><dt>Document library</dt><dd>Ctrl B</dd><dt>Resize library (divider focused)</dt><dd>Left / Right, Home / End, Enter</dd><dt>Pin / size lock</dt><dd>Ctrl Shift T / L</dd><dt>Fit page / width</dt><dd>Ctrl 0 / 2</dd><dt>Two-page spread</dt><dd>Ctrl 3</dd><dt>Zoom / text size</dt><dd>Ctrl + / −</dd><dt>Hand tool (pan a zoomed page)</dt><dd>H · or middle-drag</dd><dt>Dismiss a dialog</dt><dd>Escape</dd></dl></dialog>
+  <dialog id="shortcuts"><div class="dialog-head"><h2>Keyboard shortcuts</h2><button data-close aria-label="Close shortcuts">×</button></div><dl><dt>Next / previous page</dt><dd>PgDn / PgUp</dd><dt>Page mode navigation</dt><dd>Right / Left</dd><dt>Next / previous screen</dt><dd>Space / Shift Space</dd><dt>Scroll</dt><dd>Up / Down</dd><dt>First / last location</dt><dd>Home / End</dd><dt>Go to location</dt><dd>Ctrl G</dd><dt>Back after a jump</dt><dd>Alt Left</dd><dt>Open file</dt><dd>Ctrl O</dd><dt>Document library</dt><dd>Ctrl B</dd><dt>Resize library (divider focused)</dt><dd>Left / Right, Home / End, Enter</dd><dt>Pin / size lock</dt><dd>Ctrl Shift T / L</dd><dt>Fit page / width</dt><dd>Ctrl 0 / 2</dd><dt>Two-page spread</dt><dd>Ctrl 3</dd><dt>Zoom / text size</dt><dd>Ctrl + / −</dd><dt>Hand tool (pan a zoomed page)</dt><dd>H · or middle-drag</dd><dt>Command palette</dt><dd>Ctrl K</dd><dt>Dismiss a dialog</dt><dd>Escape</dd></dl></dialog>
   <dialog id="delete-data"><h2>Delete saved reading data?</h2><p>This removes saved positions and reading settings. Your documents and recent-file list remain. The current position will be saved again when you navigate.</p><div class="dialog-actions"><button data-close>Cancel</button><button id="confirm-delete" class="danger">Delete reading data</button></div></dialog>
   <input id="file-input" type="file" accept=".pdf,.epub,.md,.markdown,.txt,.png,.jpg,.jpeg,.webp,.gif,.avif,.bmp" hidden>`;
 
@@ -171,6 +173,33 @@ const library = createLibrary($('library-root'), {
 });
 $('library-toggle').onclick = () => library.toggle();
 
+/**
+ * The palette is mounted after the actions it dispatches, since `run` closes over `action`
+ * and `library`. It shares the dispatcher with the menu rather than reimplementing commands.
+ */
+let palette: ReturnType<typeof createPalette> | undefined;
+function openPalette() {
+  if (!palette) {
+    // Created on first use, and appended after the static dialogs, so the shared close handler
+    // above (which focuses the reading surface) never attaches to it; the palette owns its focus.
+    palette = createPalette({ hasDocument: () => Boolean(reader), desktop, run: id => command(id) });
+    document.body.append(palette.element);
+  }
+  palette.open();
+}
+
+/** Runs a command by catalog id. Every entry point (palette, menu, keyboard) goes through here. */
+async function command(id: string) {
+  // The catalog's declared requirements are enforced here rather than by each caller, so the
+  // keyboard, the menu and the palette cannot drift into different behaviour.
+  const entry = COMMANDS.find(candidate => candidate.id === id);
+  const reason = entry && unavailableReason(entry, { hasDocument: Boolean(reader), desktop });
+  if (reason) { notify(reason); return; }
+  if (id === 'open') openFile();
+  else if (id === 'library') library.toggle();
+  else await action(id);
+}
+
 async function password(): Promise<string | null> {
   const dialog = $<HTMLDialogElement>('password'), form = dialog.querySelector('form')!, input = $<HTMLInputElement>('secret'); input.value = '';
   return new Promise(resolve => {
@@ -254,22 +283,21 @@ async function action(name: string) {
   else if (name === 'clear-recents') { if (desktop) await native('clear_recents'); $('recents').replaceChildren(); notify('Recent-file list cleared. Documents and saved positions are unchanged.'); }
   else if (['back', 'start', 'end', 'screen-next', 'screen-previous'].includes(name)) await navigate(name as Parameters<ReaderAdapter['navigate']>[0]);
 }
-document.querySelectorAll<HTMLButtonElement>('[data-action]').forEach(button => button.onclick = () => { closeDialog($<HTMLDialogElement>('menu')); void action(button.dataset.action!).catch(fail); });
+document.querySelectorAll<HTMLButtonElement>('[data-action]').forEach(button => button.onclick = () => { closeDialog($<HTMLDialogElement>('menu')); void command(button.dataset.action!).catch(fail); });
 for (const id of ['font-size', 'line-height', 'margin', 'wrap']) $(id).onchange = () => { const fontSize = Number($<HTMLInputElement>('font-size').value); if (fontSize < 12 || fontSize > 40) return; void changeOptions({ fontSize, lineHeight: Number($<HTMLSelectElement>('line-height').value), margin: Number($<HTMLSelectElement>('margin').value), wrap: $<HTMLInputElement>('wrap').checked }); };
 $('confirm-delete').onclick = () => { void (async () => { await flush(); if (desktop) await native('clear_reading_data'); else for (const key of Object.keys(localStorage)) if (key.startsWith('float-preview:')) localStorage.removeItem(key); dirty = false; closeDialog($<HTMLDialogElement>('delete-data')); notify('Saved reading data deleted. Your documents are unchanged.'); })().catch(fail); };
 
 document.addEventListener('keydown', event => {
   if (document.querySelector('dialog[open]')) return;
-  if (event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === 'b') { event.preventDefault(); library.toggle(); return; }
   const target = event.composedPath()[0];
   if (target instanceof HTMLElement && (target.closest('input,textarea,select,[contenteditable="true"]'))) return;
+  // Ctrl+K is checked before the command table: it opens the palette and needs no document.
+  if (shortcutFor(event) === 'command-palette') { event.preventDefault(); openPalette(); return; }
   const key = event.key.toLowerCase(); let operation: (() => void) | undefined;
-  if (event.ctrlKey && event.shiftKey && key === 't') operation = () => void toggle('pin');
-  else if (event.ctrlKey && event.shiftKey && key === 'l') operation = () => void toggle('lock');
-  else if (event.ctrlKey && key === 'o') operation = () => openFile();
-  else if (event.ctrlKey && key === 'g') operation = jump;
-  else if (event.ctrlKey && ['+', '=', '-', '0', '2', '3'].includes(key)) operation = () => void action(key === '0' ? 'fit-page' : key === '2' ? 'fit-width' : key === '3' ? 'spread' : key === '-' ? 'smaller' : 'larger').catch(fail);
-  else if (event.altKey && key === 'arrowleft') operation = () => void navigate('back');
+  // Catalog shortcuts go through the same dispatcher as the menu and the palette.
+  const shortcut = shortcutFor(event);
+  if (shortcut === 'back') operation = () => void navigate('back');
+  else if (shortcut) operation = () => void command(shortcut).catch(fail);
   else if (key === 'h' && !event.ctrlKey && !event.altKey && !event.metaKey && !event.shiftKey && !event.repeat && pan.pannable && (target === document.body || target instanceof Node && (activeHost?.contains(target) || $('view-controls').contains(target)))) operation = toggleHand;
   else if (!event.ctrlKey && !event.altKey && activeHost && (target === document.body || target instanceof Node && activeHost.contains(target))) {
     const horizontal = target instanceof HTMLElement && target.closest('pre,table,[data-horizontal-scroll]');
