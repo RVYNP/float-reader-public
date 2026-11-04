@@ -105,6 +105,22 @@ the NSIS installer on Windows, and bundles the `.app` on macOS.
 > WebView2 app. Measured on that build, the unlocked minimum is 360×420 outer logical pixels and a
 > locked window's minimum equals its maximum equals the captured outer size.
 
+## README media
+
+The screenshots in `docs/media/` come from `scripts/reshoot-media.mjs`. Start the browser preview
+(`npm run dev`, port 1420), then pass a public-domain PDF and a permissively licensed EPUB:
+
+```bash
+node scripts/reshoot-media.mjs photoengravingp00wilkgoog.pdf Photoshop-UXP-Docs.epub
+```
+
+It writes every image the README uses except the hero, including the five-family theme sheet, which
+it builds from the public-domain opening of *Pride and Prejudice*. The hero is a composite made in
+the design file (`floatreader.pen`, Hero frame of the README mock): the script writes the
+raw window shots it needs as `hero-app-light.png` and `hero-app-dark.png` (ignored by git), and the
+Hero frame is exported at 2× to `hero-light.png` and `hero-dark.png`. Never commit in-copyright
+scans; the README's Credits section names the documents in use.
+
 ## Security model
 
 Source files remain unchanged. Document scripts and automatic external-resource requests are
