@@ -174,17 +174,21 @@ sign up for.
 The version number in each file name changes with every release. To check a download, compare it
 with `SHA256SUMS.txt` on the same page.
 
-**The first time you open it.** Hold My Brief isn't code-signed yet, so your computer asks you to
-confirm once:
+**The first time you open it.** Hold My Brief isn't signed with a paid Apple or Microsoft developer
+certificate yet, so your computer asks you to confirm once:
 
 - **Windows:** if a blue "Windows protected your PC" screen appears, choose **More info**, then
   **Run anyway**.
 - **Mac:** open the `.dmg` and drag Hold My Brief to Applications. The first time you open it, macOS
-  says it can't verify the developer.
+  says *"Apple could not verify 'Hold My Brief' is free of malware that may harm your Mac or
+  compromise your privacy."* That's the standard message for any app that hasn't been through
+  Apple's paid notarization service. It doesn't mean anything was found. To open it:
   - On macOS 15 (Sequoia) or later, click **Done**, open **System Settings › Privacy & Security**,
-    scroll down and click **Open Anyway**.
+    scroll down, click **Open Anyway**, then confirm with your password or Touch ID.
   - On macOS 14 or earlier, Control-click (or right-click) the app, choose **Open**, then **Open**
     again.
+  - Prefer Terminal? Check the download against `SHA256SUMS.txt` first, then run
+    `xattr -dr com.apple.quarantine "/Applications/Hold My Brief.app"` once.
 
 **Let an AI assistant do it.** If you use an AI coding assistant, give it the
 [agent setup instructions](docs/agent-setup.md). It will pick the right download, check it, install
