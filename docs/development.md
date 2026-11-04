@@ -15,7 +15,7 @@ dependencies, document files and personal reading/library data are not committed
 ## Requirements
 
 - Node.js 20.19+ or 22.12+ and npm (required by Vite)
-- Rust 1.90+ with a native toolchain — Visual Studio Build Tools on Windows, Xcode Command Line
+- Rust 1.90+ with a native toolchain: Visual Studio Build Tools on Windows, Xcode Command Line
   Tools on macOS
 - Windows only: WebView2 (preinstalled on Windows 11)
 

@@ -110,7 +110,7 @@ computer.
     <source media="(prefers-color-scheme: dark)" srcset="docs/media/library-dark.png">
     <img src="docs/media/library-light.png" alt="The document library floating over a PDF, with the page unreduced behind it" width="880">
   </picture>
-  <br><sub><b>The library</b> floats over the page — put it on either side and the page keeps its place</sub>
+  <br><sub><b>The library</b> floats over the page. Put it on either side and the page keeps its place</sub>
 </p>
 
 <p align="center">
@@ -123,7 +123,7 @@ computer.
 
 <p align="center">
   <img src="docs/media/themes.png" alt="The same page in the Brief, Lilac, Birch, Graphite and Arctic themes, light and dark" width="880">
-  <br><sub><b>Five theme families</b>, each in light and dark — Brief is the default</sub>
+  <br><sub><b>Five theme families</b>, each in light and dark. Brief is the default</sub>
 </p>
 
 ## Private by design
@@ -209,6 +209,28 @@ npm run dev         # or try the interface in a browser
 | [Development guide](docs/development.md) | Build, test and package for Windows and macOS |
 | [Requirements](docs/floating-reader-prd.md) · [Research](docs/floating-reader-research-2026-10-22.md) | Why it works the way it does |
 | [Status](docs/floating-reader-implementation.md) · [Performance](docs/floating-reader-performance.md) · [macOS audit](docs/floating-reader-macos-and-performance-audit.md) | What's verified, what's measured, what's next |
+
+## Brand
+
+The identity is deliberately plain: **the mark is the name, set once.** An acid period is the only
+colour move, and everything else is paper, ink and white space.
+
+| | |
+| --- | --- |
+| **Mark** | *Hmb.* in Inter Bold (capped at 700, never heavier), capital H, acid period |
+| **Colour** | Warm paper `#F4F1EA` · true ink `#1A1815` · one acid accent `#E13A3A`, used once per composition |
+| **Brief blue** | `#7ADBFE` floods fields (posters, covers, the icon) and stays out of the interface |
+| **Type** | Inter for the interface, JetBrains Mono for the machine voice: positions, paths, statuses |
+| **Motion** | Slow enough to feel expensive: clip settles at 340 ms, ribbon marks in 500 ms, dither resolves in 900 ms |
+
+The **Brief** theme family ships all of this as the app's default appearance, and the app icon is
+the mark itself. Colour, type and motion are documented in full in the brand guidelines that
+accompany this project.
+
+**Fonts are not bundled.** The interface asks for Inter and JetBrains Mono, then falls back to the
+system faces your computer already has. Nothing is downloaded to render the UI, which keeps the
+promise that the app works offline and never phones home. Install Inter and JetBrains Mono if you
+want the interface set exactly as designed.
 
 ## Credits
 

@@ -1,6 +1,6 @@
 Hold My Brief ${VERSION}. A reader that holds.
 
-> **Renamed:** Hold My Brief is the new name of the app previously called **Float Reader**. This build installs alongside any Float Reader install (it does not upgrade it in place) and uses a new application-data folder (`xyz.rpayton.holdmybrief`); reading positions and the library saved by Float Reader under `io.github.rvynp.floatreader` are not migrated — re-open your documents to start fresh.
+> **Renamed:** Hold My Brief is the new name of the app previously called **Float Reader**. This build installs alongside any Float Reader install (it does not upgrade it in place) and uses a new application-data folder (`xyz.rpayton.holdmybrief`); reading positions and the library saved by Float Reader under `io.github.rvynp.floatreader` are not migrated. Re-open your documents to start fresh.
 
 ## Download
 

@@ -150,7 +150,7 @@ Report:
 - Where its data lives: `%LOCALAPPDATA%\xyz.rpayton.holdmybrief` on Windows,
   `~/Library/Application Support/xyz.rpayton.holdmybrief` on macOS. It holds reading positions,
   settings and the library list, never copies of documents. (Before the rename from Float Reader the
-  folder was `io.github.rvynp.floatreader`; that data is not migrated — the app starts fresh, and
+  folder was `io.github.rvynp.floatreader`; that data is not migrated. The app starts fresh, and
   the old folder can be deleted by hand.)
 - How to uninstall:
   - Windows: **Settings › Apps › Installed apps › Hold My Brief › Uninstall**; for the portable
