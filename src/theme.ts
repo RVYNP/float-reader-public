@@ -19,7 +19,7 @@ export type Scheme = 'light' | 'dark';
 export type Appearance = { mode: AppearanceMode; palette: Palette; accent: string | null; page: PageTone };
 export type Rgb = [number, number, number];
 
-export const appearanceKey = 'float-reader:appearance';
+export const appearanceKey = 'hold-my-brief:appearance';
 export const palettes: readonly Palette[] = ['lilac', 'birch', 'graphite', 'arctic'];
 export const pageTones: readonly PageTone[] = ['theme', 'white', 'sepia', 'dim'];
 export const defaultAppearance: Appearance = { mode: 'system', palette: 'lilac', accent: null, page: 'theme' };

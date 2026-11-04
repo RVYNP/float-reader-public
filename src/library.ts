@@ -68,7 +68,7 @@ export function createLibrary(root: HTMLElement, callbacks: Callbacks): { refres
   const layout = document.getElementById('reader-layout');
   const toggleButton = document.getElementById('library-toggle');
   const workspace = document.getElementById('workspace');
-  const preferenceKey = () => `float-reader:library-${wide.matches ? 'wide' : 'narrow'}`;
+  const preferenceKey = () => `hold-my-brief:library-${wide.matches ? 'wide' : 'narrow'}`;
   function preference() { try { const saved = localStorage.getItem(preferenceKey()); return saved === null ? wide.matches : saved === 'open'; } catch { return wide.matches; } }
   let visible = preference(); let library: Library = emptyLibrary(); let filter: Filter = { kind: 'all' };
   let activePath: string | undefined; let busy = false, loaded = false, revision = 0, page = 0;
@@ -116,7 +116,7 @@ export function createLibrary(root: HTMLElement, callbacks: Callbacks): { refres
   // Drawer width and dock side. The drawer floats over the reading panel, so its width never
   // affects the page. The stored width is the user's preference; the applied width is re-clamped
   // to the current window so growing the window restores it.
-  const widthKey = 'float-reader:library-width', sideKey = 'float-reader:library-side';
+  const widthKey = 'hold-my-brief:library-width', sideKey = 'hold-my-brief:library-side';
   let preferredWidth = parseLibraryWidth(savedPreference(widthKey)); let width: number = libraryWidth.default;
   let side: LibrarySide = savedPreference(sideKey) === 'right' ? 'right' : 'left';
   const viewport = () => layout?.clientWidth || window.innerWidth;

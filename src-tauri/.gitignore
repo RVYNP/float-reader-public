@@ -1,7 +1,7 @@
 /target
 /gen/schemas
-# Generated at build time by build.rs — the repository intentionally ships no
-# binary image assets. See build.rs for the artwork.
+# Synced at build time by build.rs from the tracked renders in /icons-src/
+# (the brand system's "Hmb." mark).
 /icons/icon.png
 /icons/icon.icns
 /icons/icon.ico

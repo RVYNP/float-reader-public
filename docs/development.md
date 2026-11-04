@@ -1,4 +1,4 @@
-# Developing Float Reader
+# Developing Hold My Brief
 
 Build, test and packaging notes. For what the app does, see the [README](../README.md) and the
 [user guide](user-guide.md).
@@ -36,7 +36,7 @@ authorized relative images require the desktop app.
 **macOS**
 
 ```bash
-npm run package:macos            # -> dist/Float Reader.app (and a .dmg when available)
+npm run package:macos            # -> dist/Hold My Brief.app (and a .dmg when available)
 ```
 
 Produces an arm64 `.app` with a generated icon and an ad-hoc signature. It is not notarized, so
@@ -45,7 +45,7 @@ first launch requires right-click → **Open** (or `xattr -dr com.apple.quaranti
 **Windows**
 
 ```powershell
-./src-tauri/build-native.ps1     # -> dist/Float Reader.exe + WebView2Loader.dll
+./src-tauri/build-native.ps1     # -> dist/Hold My Brief.exe + WebView2Loader.dll
 npm run package                  # NSIS installer (targets pinned by tauri.windows.conf.json)
 ```
 
@@ -63,7 +63,7 @@ On the GNU Windows toolchain, `windres` can fail when its build output path cont
 task-specific target directory first:
 
 ```powershell
-$env:CARGO_TARGET_DIR = Join-Path $env:TEMP 'float-reader-target'
+$env:CARGO_TARGET_DIR = Join-Path $env:TEMP 'hold-my-brief-target'
 ```
 
 ## Release

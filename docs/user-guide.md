@@ -1,12 +1,12 @@
-# Float Reader user guide
+# Hold My Brief user guide
 
-Everything Float Reader does, in detail. For a quick tour, see the [README](../README.md).
+Everything Hold My Brief does, in detail. For a quick tour, see the [README](../README.md).
 
 ## Opening documents
 
 Open a PDF, DRM-free EPUB, Markdown, TXT or image file (PNG, JPEG, WebP, GIF, AVIF, BMP) with
 **Open**, Ctrl+O, a single-file drop or a command-line file argument. The Windows installer adds
-Float Reader to Explorer's **Open with** list for the document formats without changing the default
+Hold My Brief to Explorer's **Open with** list for the document formats without changing the default
 app; clean-account installer behavior has not yet been verified. A second instance routes its file
 request to the running app.
 
@@ -127,10 +127,17 @@ library.
 ## Saved reading data
 
 Saved reading data lives in the native per-user local application-data directory under
-`io.github.rvynp.floatreader` (on macOS, `~/Library/Application Support/io.github.rvynp.floatreader`),
+`xyz.rpayton.holdmybrief` (on macOS, `~/Library/Application Support/xyz.rpayton.holdmybrief`),
 not beside the source documents. Identical file bytes share resume state even after a rename.
 Changed revisions keep the previous revision's state and show a best-effort restoration message. The
 menu separately clears recents and saved reading data; neither deletes documents.
+
+> **Renamed from Float Reader.** Before the rename the bundle identifier was
+> `io.github.rvynp.floatreader`, so Float Reader builds kept their data in a folder of that name.
+> The identifier changed to `xyz.rpayton.holdmybrief` with the rename, and data from the old
+> folder is **not migrated**: the first Hold My Brief launch starts with an empty library and no
+> saved positions. The old folder is left untouched and can be deleted by hand once you no longer
+> need it.
 
 ## Document library
 
@@ -180,7 +187,7 @@ reload; removing a browser library entry removes only that cached copy, not the 
 
 ## Privacy and safety
 
-Float Reader never changes your documents, has no account, sends no analytics and needs no internet
+Hold My Brief never changes your documents, has no account, sends no analytics and needs no internet
 connection. Document scripts and automatic external-resource requests are blocked; EPUB content runs
 in a sandbox without script permission; Markdown raw HTML is disabled; local images load only from
 inside the opened document's folder. A web link opens in your browser only when you click it.

@@ -1067,7 +1067,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "float-reader"
+name = "hold-my-brief"
 version = "0.1.0"
 dependencies = [
  "image",

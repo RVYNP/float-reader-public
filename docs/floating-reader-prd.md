@@ -1,8 +1,8 @@
-Float Reader — product requirements document
+Hold My Brief — product requirements document
 
 Version 1.0 · October 22, 2026 · Status: specification for implementation planning
 
-Float Reader is a working name. The product is a compact desktop reader for PDF, EPUB, Markdown, and plain text. It stays visible beside other work, supports quick keyboard navigation, preserves the reader's place, and can lock its window dimensions. The first release prioritizes dependable reading and low resource use.
+Hold My Brief is the product name; this document was drafted under the working name Float Reader. The product is a compact desktop reader for PDF, EPUB, Markdown, and plain text. It stays visible beside other work, supports quick keyboard navigation, preserves the reader's place, and can lock its window dimensions. The first release prioritizes dependable reading and low resource use.
 
 This document defines the product to build and how to verify it. It does not claim that an application, prototype, or benchmark already exists. It incorporates the [research brief](floating-reader-research-2026-10-22.md) and independent product and technical reviews. The research remains the source for comparisons and implementation candidates; the requirements below govern product behavior.
 

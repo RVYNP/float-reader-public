@@ -1,7 +1,7 @@
 $ErrorActionPreference = 'Stop'
 # A space-free build cache also avoids the GNU windres path-quoting bug when the
 # checkout path contains spaces. The application never stores reading data in this cache.
-$env:CARGO_TARGET_DIR = Join-Path ([IO.Path]::GetTempPath()) 'float-reader-target'
+$env:CARGO_TARGET_DIR = Join-Path ([IO.Path]::GetTempPath()) 'hold-my-brief-target'
 $cargo = Get-Command cargo -ErrorAction SilentlyContinue
 if (-not $cargo) {
     $cargoPath = Join-Path $env:USERPROFILE '.cargo/bin/cargo.exe'
@@ -16,8 +16,8 @@ try {
     } finally { Pop-Location }
     & $cargoPath build --release --locked --features custom-protocol
     if ($LASTEXITCODE -ne 0) { throw 'Native build failed.' }
-    $output = Join-Path $PSScriptRoot '../dist/Float Reader.exe'
-    Copy-Item -LiteralPath (Join-Path $env:CARGO_TARGET_DIR 'release/float-reader.exe') -Destination $output -Force
+    $output = Join-Path $PSScriptRoot '../dist/Hold My Brief.exe'
+    Copy-Item -LiteralPath (Join-Path $env:CARGO_TARGET_DIR 'release/hold-my-brief.exe') -Destination $output -Force
     # The GNU Windows build links the WebView2 loader dynamically.
     $loader = Join-Path $env:CARGO_TARGET_DIR 'release/WebView2Loader.dll'
     if (Test-Path -LiteralPath $loader) {

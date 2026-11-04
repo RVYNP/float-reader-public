@@ -47,34 +47,34 @@ export function logSkip(what, why) {
 // ---------------------------------------------------------------------------
 
 const EXE = isWindows ? '.exe' : '';
-// The .app is "Float Reader.app" but CFBundleExecutable is the crate name,
-// `float-reader` -- verified on the produced bundle. The legacy product-name
+// The .app is "Hold My Brief.app" but CFBundleExecutable is the crate name,
+// `hold-my-brief` -- verified on the produced bundle. The legacy product-name
 // binary is kept as a fallback for bundles made by other tooling.
 const MAC_BUNDLE_BINARIES = [
-  join('dist', 'Float Reader.app', 'Contents', 'MacOS', 'float-reader'),
-  join('dist', 'Float Reader.app', 'Contents', 'MacOS', 'Float Reader'),
+  join('dist', 'Hold My Brief.app', 'Contents', 'MacOS', 'hold-my-brief'),
+  join('dist', 'Hold My Brief.app', 'Contents', 'MacOS', 'Hold My Brief'),
 ];
 
 /**
  * Where the compiled desktop app lives per platform.
  *
- *   Windows  dist/Float Reader.exe                     (needs WebView2Loader.dll beside it)
- *   macOS    dist/Float Reader.app/Contents/MacOS/Float Reader   (cargo/tauri --bundles app)
- *   Linux    dist/float-reader                        (plain binary; no app-bundle convention)
+ *   Windows  dist/Hold My Brief.exe                     (needs WebView2Loader.dll beside it)
+ *   macOS    dist/Hold My Brief.app/Contents/MacOS/Hold My Brief   (cargo/tauri --bundles app)
+ *   Linux    dist/hold-my-brief                        (plain binary; no app-bundle convention)
  *
- * An explicit FLOAT_READER_BINARY overrides the guess on every platform, which is
+ * An explicit HOLD_MY_BRIEF_BINARY overrides the guess on every platform, which is
  * how CI (or a `cargo build` that placed the binary under src-tauri/target)
  * points the smoke tests at the real artifact.
  */
 export function nativeBinaryPath() {
-  const override = process.env.FLOAT_READER_BINARY?.trim();
-  if (override) return { path: resolve(override), source: 'FLOAT_READER_BINARY' };
+  const override = process.env.HOLD_MY_BRIEF_BINARY?.trim();
+  if (override) return { path: resolve(override), source: 'HOLD_MY_BRIEF_BINARY' };
   if (isMac) {
     const found = MAC_BUNDLE_BINARIES.map(candidate => resolve(candidate)).find(existsSync);
     return { path: found ?? resolve(MAC_BUNDLE_BINARIES[0]), source: 'default macOS app bundle' };
   }
-  if (isLinux) return { path: resolve(`dist/float-reader`), source: 'default Linux binary' };
-  return { path: resolve(`dist/Float Reader${EXE}`), source: 'default Windows executable' };
+  if (isLinux) return { path: resolve(`dist/hold-my-brief`), source: 'default Linux binary' };
+  return { path: resolve(`dist/Hold My Brief${EXE}`), source: 'default Windows executable' };
 }
 
 /**
@@ -96,20 +96,20 @@ export function requireNativeBinary() {
     reason:
       `Native app not found at ${path} (expected from ${source}).\n` +
       `  Build it first: ${howToBuild}\n` +
-      `  Or point at an existing binary with FLOAT_READER_BINARY=/path/to/binary`,
+      `  Or point at an existing binary with HOLD_MY_BRIEF_BINARY=/path/to/binary`,
   };
 }
 
 /**
  * Executable name as the OS reports it.
  *
- * macOS: the crate/binary name is `float-reader` (CFBundleExecutable), NOT the
- *        product name "Float Reader" -- the .app is "Float Reader.app" but the
- *        binary inside Contents/MacOS is `float-reader`.
- * Windows: the executable is "Float Reader.exe".
+ * macOS: the crate/binary name is `hold-my-brief` (CFBundleExecutable), NOT the
+ *        product name "Hold My Brief" -- the .app is "Hold My Brief.app" but the
+ *        binary inside Contents/MacOS is `hold-my-brief`.
+ * Windows: the executable is "Hold My Brief.exe".
  */
 export function nativeProcessName(binaryPath = nativeBinaryPath().path) {
-  if (isWindows) return `Float Reader${EXE}`;
+  if (isWindows) return `Hold My Brief${EXE}`;
   return basename(binaryPath);
 }
 
@@ -213,10 +213,10 @@ export async function launchNativeApp({ fixture, onReady }) {
       result: 'skipped',
       checks: [],
       reason:
-        `A Float Reader instance is already running (pid ${running.join(', ')}). ` +
+        `A Hold My Brief instance is already running (pid ${running.join(', ')}). ` +
         'tauri-plugin-single-instance makes a new launch forward its argument and exit 0 ' +
         'immediately, so liveness cannot be observed. Quit it and re-run:\n  ' +
-        (isWindows ? 'taskkill /IM "Float Reader.exe" /F' : `kill ${running.join(' ')}`),
+        (isWindows ? 'taskkill /IM "Hold My Brief.exe" /F' : `kill ${running.join(' ')}`),
     };
   }
 
@@ -257,7 +257,7 @@ export async function launchNativeApp({ fixture, onReady }) {
         checks,
         reason:
           'The app exited 0 during startup, which is what tauri-plugin-single-instance does when ' +
-          'another instance already owns the session. Close any running Float Reader and re-run.',
+          'another instance already owns the session. Close any running Hold My Brief and re-run.',
       };
     }
     return fail(`App exited after ${exit.afterMs} ms (code ${exit.code}, signal ${exit.signal}) instead of staying open.`);
@@ -277,7 +277,7 @@ export async function launchNativeApp({ fixture, onReady }) {
       checks.push(`SKIP   reason: ${probe.reason}`);
     }
   } else {
-    const probe = require('node:child_process').spawnSync('xdotool', ['search', '--name', 'Float Reader'], { encoding: 'utf8' });
+    const probe = require('node:child_process').spawnSync('xdotool', ['search', '--name', 'Hold My Brief'], { encoding: 'utf8' });
     if (probe.status === 0 && probe.stdout.trim()) checks.push(`window exists (xdotool: ${probe.stdout.trim().split('\n').length} match(es))`);
     else checks.push('SKIP window existence: xdotool unavailable');
   }
@@ -344,7 +344,7 @@ export async function connectAppPage({ child, port, stderrTail }, timeoutMs = 30
 export function cdpUnsupportedReason() {
   return (
     'WKWebView has no Playwright CDP endpoint: Tauri v2 on macOS renders in WKWebView, ' +
-    'which exposes remote inspection only through Safari > Develop > Float Reader ' +
+    'which exposes remote inspection only through Safari > Develop > Hold My Brief ' +
     '(WebKit Web Inspector). chromium.connectOverCDP cannot attach to it. ' +
     'CDP assertions run on Windows/WebView2 only.'
   );

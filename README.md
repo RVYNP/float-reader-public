@@ -1,14 +1,14 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/media/hero-dark.png">
-    <img src="docs/media/hero-light.png" alt="Float Reader pinned beside other work, showing the first chapter of Pride and Prejudice in a small reading window" width="880">
+    <img src="docs/media/hero-light.png" alt="Hold My Brief pinned beside other work, showing the first chapter of Pride and Prejudice in a small reading window" width="880">
   </picture>
 </p>
 
-<h1 align="center">Float Reader</h1>
+<h1 align="center">Hold My Brief</h1>
 
 <p align="center">
-  <b>A little room to read.</b><br>
+  <b>A reader that holds.</b><br>
   A small reading window that stays on top of your work and remembers exactly where you left off.
 </p>
 
@@ -31,10 +31,14 @@ Reading something *while* you work (a spec beside a design file, a paper beside 
 second screen) usually means juggling a full-size viewer: switching windows, resizing, scrolling to
 find your place again.
 
-Float Reader is a pocket-sized window built for that. Pin it above everything else, lock its size so
+Hold My Brief is a pocket-sized window built for that. Pin it above everything else, lock its size so
 it never gets in the way, and pick up on the same passage tomorrow. It opens the formats people
 actually read (PDF, EPUB books, Markdown, plain text and images), and your files never leave your
 computer.
+
+> **Note:** Hold My Brief was previously developed under the name **Float Reader**. The rename
+> moves the application-data folder (see the [user guide](docs/user-guide.md#saved-reading-data));
+> saved reading positions and libraries from Float Reader builds are not migrated.
 
 ## What it does
 
@@ -128,7 +132,7 @@ computer.
 
 ## How it was made
 
-Float Reader was planned before it was built, and every claim about it is backed by a test or a
+Hold My Brief was planned before it was built, and every claim about it is backed by a test or a
 measurement.
 
 ```mermaid
@@ -149,7 +153,7 @@ flowchart LR
 | **Measure** | A [performance pass](docs/floating-reader-performance.md) that halved PDF time-to-first-page (248 → 128 ms) and made flipping back and forth through 120 pages 16× faster (2,000 → 122 ms). |
 
 The [implementation status](docs/floating-reader-implementation.md) separates what is verified
-from what isn't yet. Float Reader is a working release candidate, not a finished 1.0. Open items
+from what isn't yet. Hold My Brief is a working release candidate, not a finished 1.0. Open items
 such as screen-reader testing and very large files are listed there, not glossed over.
 
 ## Download
@@ -160,18 +164,18 @@ sign up for.
 
 | Your computer | File to download |
 | --- | --- |
-| **Windows** (64-bit) | `Float-Reader-0.1.0-windows-x64-setup.exe` installs it just for you, no administrator needed. Prefer not to install? Unzip `Float-Reader-0.1.0-windows-x64-portable.zip` anywhere and run **Float Reader.exe**. |
-| **Mac** with Apple silicon (M1 or later) | `Float-Reader-0.1.0-macos-arm64.dmg`. There's no version for Intel Macs yet. |
+| **Windows** (64-bit) | `Hold-My-Brief-0.1.0-windows-x64-setup.exe` installs it just for you, no administrator needed. Prefer not to install? Unzip `Hold-My-Brief-0.1.0-windows-x64-portable.zip` anywhere and run **Hold My Brief.exe**. |
+| **Mac** with Apple silicon (M1 or later) | `Hold-My-Brief-0.1.0-macos-arm64.dmg`. There's no version for Intel Macs yet. |
 
 The version number in each file name changes with every release. To check a download, compare it
 with `SHA256SUMS.txt` on the same page.
 
-**The first time you open it.** Float Reader isn't code-signed yet, so your computer asks you to
+**The first time you open it.** Hold My Brief isn't code-signed yet, so your computer asks you to
 confirm once:
 
 - **Windows:** if a blue "Windows protected your PC" screen appears, choose **More info**, then
   **Run anyway**.
-- **Mac:** open the `.dmg` and drag Float Reader to Applications. The first time you open it, macOS
+- **Mac:** open the `.dmg` and drag Hold My Brief to Applications. The first time you open it, macOS
   says it can't verify the developer.
   - On macOS 15 (Sequoia) or later, click **Done**, open **System Settings › Privacy & Security**,
     scroll down and click **Open Anyway**.
@@ -206,7 +210,7 @@ npm run dev         # or try the interface in a browser
 
 The look and theme system are inspired by [Tern](https://stencil.so/tern) by
 [Stencil](https://stencil.so). Its quiet, airy styling, its light/dark design tokens and its theme
-picker that previews on hover shaped Float Reader's Appearance panel. The Graphite theme follows
+picker that previews on hover shaped Hold My Brief's Appearance panel. The Graphite theme follows
 the default palette in [Tern's published theme tokens](https://docs.stencil.so/tern/styles/variables.html).
 Thank you to the Stencil team.
 

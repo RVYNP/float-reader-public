@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 test('compact text workflow, semantic resume, invalid replacement preserves document', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'A little room to read.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Hand it over.' })).toBeVisible();
   const text = Array.from({ length: 240 }, (_, i) => `Line ${i + 1}: A quiet place to read, beside the work in progress.`).join('\n');
   const file = { name: 'reading.txt', mimeType: 'text/plain', buffer: Buffer.from(text) };
   await page.locator('#file-input').setInputFiles(file);

@@ -8,7 +8,7 @@ function openDatabase(): Promise<IDBDatabase> {
   if (!database) {
     database = new Promise<IDBDatabase>((resolve, reject) => {
       let blocked = false;
-      const request = indexedDB.open('float-reader-library', 1);
+      const request = indexedDB.open('hold-my-brief-library', 1);
       request.onupgradeneeded = () => {
         request.result.createObjectStore('state');
         request.result.createObjectStore('files');
@@ -16,7 +16,7 @@ function openDatabase(): Promise<IDBDatabase> {
       request.onerror = () => reject(request.error ?? Error('Browser library storage is unavailable.'));
       request.onblocked = () => {
         blocked = true;
-        reject(Error('Close other Float Reader tabs to update browser library storage.'));
+        reject(Error('Close other Hold My Brief tabs to update browser library storage.'));
       };
       request.onsuccess = () => {
         const db = request.result;
