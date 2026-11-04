@@ -1,6 +1,6 @@
 # Hold My Brief: performance audit and macOS port
 
-Review of [`RVYNP/float-reader-public`](https://github.com/RVYNP/float-reader-public) at the
+Review of [`RVYNP/hold-my-brief`](https://github.com/RVYNP/hold-my-brief) (then named `float-reader-public`) at the
 snapshot in `float-reader-public-main/`, covering (1) what limits performance today and (2) what
 it takes to build and ship it on macOS.
 

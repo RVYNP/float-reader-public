@@ -163,7 +163,7 @@ such as screen-reader testing and very large files are listed there, not glossed
 ## Download
 
 Get the newest version from the
-[latest release](https://github.com/RVYNP/float-reader-public/releases/latest). There's nothing to
+[latest release](https://github.com/RVYNP/hold-my-brief/releases/latest). There's nothing to
 sign up for.
 
 | Your computer | File to download |
