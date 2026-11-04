@@ -115,10 +115,10 @@ computer.
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/media/library-resize-dark.png">
-    <img src="docs/media/library-resize-light.png" alt="Dragging the divider makes the library wider while the page stays exactly where it is; a double-click puts it back" width="880">
+    <source media="(prefers-color-scheme: dark)" srcset="docs/media/library-resize-dark.gif">
+    <img src="docs/media/library-resize-light.gif" alt="The library opens over the page, is dragged wider, reset with a double-click and closed, and the page never moves" width="880">
   </picture>
-  <br><sub><b>Make it wider</b>: drag the divider and the drawer grows over the page; double-click to reset</sub>
+  <br><sub><b>Make it wider</b>: open the drawer, drag the divider, double-click to reset. The page never moves</sub>
 </p>
 
 <p align="center">
