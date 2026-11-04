@@ -108,10 +108,12 @@ the NSIS installer on Windows, and bundles the `.app` on macOS.
 ## README media
 
 The screenshots in `docs/media/` come from `scripts/reshoot-media.mjs`. Start the browser preview
-(`npm run dev`, port 1420), then pass a public-domain PDF and a permissively licensed EPUB:
+(`npm run dev`, port 1420), then pass a public-domain PDF and a permissively licensed EPUB. Pick a PDF
+with a text layer: scanned pages without one carry an "Image-only page" note
+([#16](https://github.com/RVYNP/hold-my-brief/issues/16)) that would land in every shot.
 
 ```bash
-node scripts/reshoot-media.mjs photoengravingp00wilkgoog.pdf Photoshop-UXP-Docs.epub
+node scripts/reshoot-media.mjs halftoneprocessp00verf_0.pdf Photoshop-UXP-Docs.epub
 ```
 
 It writes every still the README uses except the hero, including the five-family theme sheet, which
@@ -121,7 +123,7 @@ raw window shots it needs as `hero-app-light.png` and `hero-app-dark.png` (ignor
 Hero frame is exported at 2× to `hero-light.png` and `hero-dark.png`.
 
 The animated library demo (`library-resize-light.gif` and `library-resize-dark.gif`) comes from
-`node scripts/record-library-demo.mjs photoengravingp00wilkgoog.pdf`. It drives the real interface
+`node scripts/record-library-demo.mjs halftoneprocessp00verf_0.pdf`. It drives the real interface
 with a drawn cursor, steps every CSS animation one frame at a time so each run is identical, and
 encodes with ffmpeg's two-pass palette (Homebrew's build; set `FFMPEG` to use another).
 
