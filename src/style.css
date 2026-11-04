@@ -325,3 +325,16 @@ dd { margin: 0; color: var(--muted); }
 
 /* Find in document (Ctrl+F): a compact bar above the reading panel, not a floating
    overlay, so it never covers the text it is searching. */
+/* The reading surface is absolutely positioned over the whole panel, so the find bar floats
+   above it on the stacking axis rather than sharing its layout flow. */
+#find-bar { position: absolute; top: 0; left: 0; right: 0; z-index: 5; display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-bottom: 1px solid var(--border); background: var(--card); color: var(--muted); box-shadow: var(--shadow-popover); }
+#find-bar[hidden] { display: none; }
+/* While the bar is open, shift the reading surface down so the first line is never hidden. */
+#workspace:has(#find-bar:not([hidden])) .reader-host { top: 39px; }
+#find-bar svg { flex-shrink: 0; }
+#find-query { flex: 1; min-width: 0; padding: 4px 7px; border: 1px solid var(--border); border-radius: 5px; background: var(--card); color: var(--fg); font: inherit; font-size: 12px; }
+#find-query:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+#find-status { font-size: 10px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; min-width: 0; }
+#find-bar button { flex-shrink: 0; padding: 1px 6px; font-size: 11px; border-radius: 4px; color: var(--muted); }
+#find-bar button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent-ink); border-color: var(--accent-border); }
+#find-bar button:disabled { opacity: .4; }

@@ -4,6 +4,7 @@ import { desktop, native, state, browserFile, persist, openExternal, confirmDocu
 import { createLibrary } from './library';
 import { ImageAdapter } from './adapters/image';
 import { createPalette } from './palette';
+import { createFindBar } from './find-bar';
 import { COMMANDS, shortcutFor, unavailableReason } from './commands';
 import { initAppearance } from './theme';
 import { appearanceSummary, createAppearanceSheet, paletteIcon } from './appearance';
@@ -36,7 +37,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <dialog id="contents"><div class="dialog-head"><h2>Contents</h2><button data-close aria-label="Close contents">×</button></div><div id="outline-list"></div></dialog>
   <dialog id="typography"><div class="dialog-head"><h2>Reading settings</h2><button data-close aria-label="Close settings">×</button></div><label>Text size <input id="font-size" type="number" min="12" max="40" value="18"></label><label>Line spacing <select id="line-height"><option>1.4</option><option selected>1.65</option><option>1.9</option><option>2.2</option></select></label><label>Margins <select id="margin"><option value="12">Narrow</option><option value="24" selected>Comfortable</option><option value="40">Wide</option></select></label><label class="check"><input id="wrap" type="checkbox" checked>Wrap plain text</label></dialog>
   <dialog id="appearance"></dialog>
-  <dialog id="shortcuts"><div class="dialog-head"><h2>Keyboard shortcuts</h2><button data-close aria-label="Close shortcuts">×</button></div><dl><dt>Next / previous page</dt><dd>PgDn / PgUp</dd><dt>Page mode navigation</dt><dd>Right / Left</dd><dt>Next / previous screen</dt><dd>Space / Shift Space</dd><dt>Scroll</dt><dd>Up / Down</dd><dt>First / last location</dt><dd>Home / End</dd><dt>Go to location</dt><dd>Ctrl G</dd><dt>Back after a jump</dt><dd>Alt Left</dd><dt>Open file</dt><dd>Ctrl O</dd><dt>Document library</dt><dd>Ctrl B</dd><dt>Resize library (divider focused)</dt><dd>Left / Right, Home / End, Enter</dd><dt>Pin / size lock</dt><dd>Ctrl Shift T / L</dd><dt>Fit page / width</dt><dd>Ctrl 0 / 2</dd><dt>Two-page spread</dt><dd>Ctrl 3</dd><dt>Zoom / text size</dt><dd>Ctrl + / −</dd><dt>Hand tool (pan a zoomed page)</dt><dd>H · or middle-drag</dd><dt>Command palette</dt><dd>Ctrl K</dd><dt>Dismiss a dialog</dt><dd>Escape</dd></dl></dialog>
+  <dialog id="shortcuts"><div class="dialog-head"><h2>Keyboard shortcuts</h2><button data-close aria-label="Close shortcuts">×</button></div><dl><dt>Next / previous page</dt><dd>PgDn / PgUp</dd><dt>Page mode navigation</dt><dd>Right / Left</dd><dt>Next / previous screen</dt><dd>Space / Shift Space</dd><dt>Scroll</dt><dd>Up / Down</dd><dt>First / last location</dt><dd>Home / End</dd><dt>Go to location</dt><dd>Ctrl G</dd><dt>Back after a jump</dt><dd>Alt Left</dd><dt>Open file</dt><dd>Ctrl O</dd><dt>Document library</dt><dd>Ctrl B</dd><dt>Resize library (divider focused)</dt><dd>Left / Right, Home / End, Enter</dd><dt>Pin / size lock</dt><dd>Ctrl Shift T / L</dd><dt>Fit page / width</dt><dd>Ctrl 0 / 2</dd><dt>Two-page spread</dt><dd>Ctrl 3</dd><dt>Zoom / text size</dt><dd>Ctrl + / −</dd><dt>Hand tool (pan a zoomed page)</dt><dd>H · or middle-drag</dd><dt>Find in document</dt><dd>Ctrl F</dd><dt>Command palette</dt><dd>Ctrl K</dd><dt>Dismiss a dialog</dt><dd>Escape</dd></dl></dialog>
   <dialog id="delete-data"><h2>Delete saved reading data?</h2><p>This removes saved positions and reading settings. Your documents and recent-file list remain. The current position will be saved again when you navigate.</p><div class="dialog-actions"><button data-close>Cancel</button><button id="confirm-delete" class="danger">Delete reading data</button></div></dialog>
   <input id="file-input" type="file" accept=".pdf,.epub,.md,.markdown,.txt,.png,.jpg,.jpeg,.webp,.gif,.avif,.bmp" hidden>`;
 
@@ -188,6 +189,18 @@ function openPalette() {
   palette.open();
 }
 
+/**
+ * The find bar sits above the reading panel. It asks the current adapter to search and
+ * reveal; adapters without a text layer (images) report that instead of searching.
+ */
+const findBar = createFindBar({
+  target: () => reader,
+  formatIsImage: () => Boolean(active && Object.hasOwn(imageFormats, active.format)),
+  onError: fail,
+});
+// Inside the reading panel, so it pushes the document down rather than covering it.
+$('workspace').prepend(findBar.element);
+
 /** Runs a command by catalog id. Every entry point (palette, menu, keyboard) goes through here. */
 async function command(id: string) {
   // The catalog's declared requirements are enforced here rather than by each caller, so the
@@ -197,6 +210,7 @@ async function command(id: string) {
   if (reason) { notify(reason); return; }
   if (id === 'open') openFile();
   else if (id === 'library') library.toggle();
+  else if (id === 'find') findBar.open();
   else await action(id);
 }
 
@@ -245,6 +259,8 @@ async function load(open: () => Promise<Opened | null>, label = 'document'): Pro
     $('filename').textContent = doc.name; $('filename').title = doc.path;
     for (const id of ['previous', 'position', 'next']) $<HTMLButtonElement>(id).disabled = false;
     showPosition(reader.getPosition()); staging.focus(); candidate = undefined; staging = undefined; cancelPending = undefined;
+    // Marks belong to the adapter that produced them, so a new document starts with none.
+    findBar.close();
     if (doc.warning) notify(doc.warning);
     await library.refresh(doc.path).catch(fail);
     return true;
@@ -290,6 +306,10 @@ $('confirm-delete').onclick = () => { void (async () => { await flush(); if (des
 document.addEventListener('keydown', event => {
   if (document.querySelector('dialog[open]')) return;
   const target = event.composedPath()[0];
+  // Escape closes the find bar from anywhere except its own field, which handles it itself.
+  if (event.key === 'Escape' && findBar.isOpen() && target !== findBar.element.querySelector('#find-query')) {
+    event.preventDefault(); findBar.close(); activeHost?.focus(); return;
+  }
   if (target instanceof HTMLElement && (target.closest('input,textarea,select,[contenteditable="true"]'))) return;
   // Ctrl+K is checked before the command table: it opens the palette and needs no document.
   if (shortcutFor(event) === 'command-palette') { event.preventDefault(); openPalette(); return; }

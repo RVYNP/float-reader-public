@@ -4,6 +4,7 @@ import 'foliate-js/view.js';
 import type { Locator, OutlineItem, Position, ReaderAdapter, ReaderContext, ReaderOptions, ReaderSource } from '../types';
 import { isDark, liftInk, onAppearanceChange, parseRgb, readingColors, rgbToHex, type Rgb } from '../theme';
 import { MIN_SPREAD_WIDTH, pagesLabel, pairedSides } from '../spread';
+import { findMatches, type DocumentSearch, type SearchHit, type SearchOptions, type UnitText } from '../search';
 
 const RESOURCE_LIMIT = 64 * 1024 * 1024;
 const ARCHIVE_LIMIT = 512 * 1024 * 1024;
@@ -116,6 +117,10 @@ export class EpubAdapter implements ReaderAdapter {
   private observer?: ResizeObserver;
   private resizeTimer?: ReturnType<typeof setTimeout>;
   private chapter = '';
+  /** Plain text per spine section, extracted on demand for search and kept with the document. */
+  private sectionText = new Map<number, string>();
+  /** The section and offset of the currently marked search hit, if any. */
+  private markedHit?: { index: number; start: number; length: number };
   private position: Position = { label: 'Opening EPUB…', fraction: 0, locator: { kind: 'epub' }, scrub: { current: 0, total: 100, unit: 'percent' } };
   private explicitEnd = false;
   private unsubscribe?: () => void;
@@ -380,6 +385,101 @@ export class EpubAdapter implements ReaderAdapter {
     });
   }
   getPosition() { return this.position; }
+
+  /**
+   * Searches each spine section's text and reports hits as section index plus character offset.
+   *
+   * Section documents are created lazily by foliate, so text is loaded one section at a time
+   * and cached. A hit stores the offset into that plain text, which `revealSearchMatch` turns
+   * back into a Range using the same `rangeAtOffset` helper the position restore already uses.
+   */
+  async search(query: string, options: SearchOptions = {}): Promise<DocumentSearch> {
+    const book = this.book;
+    if (!book || this.disposed) return { hits: [], truncated: false };
+    const hits: SearchHit[] = [];
+    let textSections = 0;
+    for (let index = 0; index < book.sections.length; index++) {
+      const text = await this.sectionBodyText(index);
+      if (this.disposed) return { hits: [], truncated: false };
+      if (!text.trim()) continue;
+      textSections++;
+      const id = book.sections[index]?.id ?? '';
+      const unit: UnitText = { number: index + 1, text, label: /\.[a-z]+$/i.test(id) ? `Section ${index + 1} \u00b7 ${id.replace(/\.[^.]+$/, '')}` : `Section ${index + 1}` };
+      for (const match of findMatches(unit.text, query, options)) {
+        hits.push({ text: unit.text.slice(match.start, match.end), excerpt: '', start: match.start, end: match.end, unit: unit.number, unitLabel: unit.label });
+        if (hits.length >= 2000) return { hits, truncated: true };
+      }
+    }
+    if (!textSections) return { hits: [], truncated: false, unavailable: 'This EPUB has no readable text' };
+    return { hits, truncated: false };
+  }
+
+  /** The plain text of one spine section, extracted from its sanitised document. */
+  private async sectionBodyText(index: number): Promise<string> {
+    const cached = this.sectionText.get(index);
+    if (cached !== undefined) return cached;
+    const section = this.book?.sections[index];
+    if (!section) return '';
+    let text = '';
+    try {
+      const doc = await section.createDocument();
+      text = doc.body?.textContent ?? doc.documentElement.textContent ?? '';
+    } catch { text = ''; }
+    finally { try { section.unload(); } catch { /* already unloaded */ } }
+    this.sectionText.set(index, text);
+    return text;
+  }
+
+  /** Navigates so the hit is on screen, then marks it in the rendered section. */
+  async revealSearchMatch(hit: SearchHit): Promise<void> {
+    const index = hit.unit - 1;
+    this.markedHit = { index, start: hit.start, length: hit.text.length };
+    return this.enqueue(async () => {
+      if (!this.view || this.disposed) return;
+      this.markedHit = { index, start: hit.start, length: hit.text.length };
+      await this.view.renderer.goTo({ index, anchor: doc => rangeAtOffset(doc, hit.start) });
+      this.paintMark();
+    });
+  }
+
+  clearSearchHighlights(): void {
+    this.markedHit = undefined;
+    this.paintMark();
+  }
+
+  /**
+   * Marks the current hit inside whichever content iframe is showing. The frame document is
+   * same-origin and its content is sanitised, so a `<mark>` wrapper here cannot introduce
+   * script or external resources.
+   */
+  private paintMark(): void {
+    const contents = this.view?.renderer.getContents?.() ?? [];
+    for (const { doc } of contents) {
+      for (const old of Array.from(doc.querySelectorAll('mark.search-hit'))) old.replaceWith(...Array.from(old.childNodes));
+      doc.body?.normalize();
+    }
+    const hit = this.markedHit;
+    if (!hit) return;
+    const target = contents.find(entry => entry.index === hit.index);
+    if (!target) return;
+    const range = rangeAtOffset(target.doc, hit.start);
+    try {
+      const slice = target.doc.createRange();
+      slice.setStart(range.startContainer, range.startOffset);
+      const text = target.doc.createTreeWalker(target.doc.body, NodeFilter.SHOW_TEXT);
+      let remaining = hit.length;
+      for (let node = text.nextNode(); node && remaining > 0; node = text.nextNode()) {
+        const size = node.textContent?.length ?? 0;
+        if (size >= remaining) { slice.setEnd(node, remaining); remaining = 0; }
+        else { remaining -= size; }
+      }
+      if (remaining > 0) return;
+      const mark = target.doc.createElement('mark');
+      mark.className = 'search-hit';
+      mark.append(slice.extractContents());
+      slice.insertNode(mark);
+    } catch { /* a mark that cannot be placed is cosmetic; navigation already happened */ }
+  }
   private async restoreNow(locator: Locator) {
     if (locator.kind !== 'epub' || !this.book || !this.view) return;
     this.explicitEnd = locator.end === true;

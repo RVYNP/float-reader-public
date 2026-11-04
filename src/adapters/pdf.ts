@@ -4,6 +4,7 @@ import 'pdfjs-dist/web/pdf_viewer.css';
 import './pdf.css';
 import type { Locator, OutlineItem, Position, ReaderAdapter, ReaderContext, ReaderOptions, ReaderSource } from '../types';
 import { MIN_SPREAD_WIDTH, pagesLabel, spreadPages } from '../spread';
+import { searchUnits, type DocumentSearch, type SearchHit, type SearchOptions, type UnitText } from '../search';
 
 GlobalWorkerOptions.workerSrc = workerURL;
 /** Bound on decoded page bitmaps kept for instant page turns (bytes of canvas backing store). */
@@ -38,6 +39,10 @@ export class PdfAdapter implements ReaderAdapter {
   private observer?: ResizeObserver;
   private resizeTimer?: ReturnType<typeof setTimeout>;
   private pageCache = new Map<string, HTMLCanvasElement>();
+  /** Plain text per physical page, extracted on demand for search and kept with the document. */
+  private textCache = new Map<number, string>();
+  /** The hit currently marked per page, redrawn whenever the shown pages change. */
+  private marks = new Map<number, SearchHit>();
   private prefetchAbort?: AbortController;
   private prefetching = false;
   private explicitEnd = false;
@@ -226,6 +231,7 @@ export class PdfAdapter implements ReaderAdapter {
     this.host.scrollLeft = clamp(x) * size.width;
     this.explicitEnd = atEnd;
     for (const page of previous) if (!pages.includes(page)) page.cleanup();
+    this.paintMarks();
     this.report();
   }
 
@@ -280,6 +286,88 @@ export class PdfAdapter implements ReaderAdapter {
 
   private pushHistory() { this.history.push(this.getPosition().locator); if (this.history.length > 20) this.history.shift(); }
   private report() { if (!this.disposed) this.context.onPosition(this.getPosition()); }
+
+  /**
+   * Searches every page's text layer and reports each hit on its physical page.
+   *
+   * Text is extracted page by page and cached, because a search over a 1,000-page document
+   * would otherwise re-extract everything on the next query. The cache holds the text only
+   * (a few MB even for a long book) and is dropped with the document.
+   */
+  async search(query: string, options: SearchOptions = {}): Promise<DocumentSearch> {
+    const doc = this.doc;
+    if (!doc || this.disposed) return { hits: [], truncated: false };
+    const units: UnitText[] = [];
+    let textPages = 0;
+    for (let number = 1; number <= doc.numPages; number++) {
+      const text = await this.pageText(number);
+      if (this.disposed) return { hits: [], truncated: false };
+      if (!text.trim()) continue;
+      textPages++;
+      units.push({ text, number, label: this.labels?.[number - 1] || `Page ${number}` });
+    }
+    // A PDF of scans has pages but no text layer: say so instead of "no matches", which
+    // would wrongly imply the word is not on the page.
+    if (!textPages) return { hits: [], truncated: false, unavailable: 'No text layer in this document (it may be scanned images)' };
+    const { hits, truncated } = searchUnits(units, query, options);
+    return { hits, truncated };
+  }
+
+  /** Extracts (and caches) the plain text of one page. */
+  private async pageText(number: number): Promise<string> {
+    const cached = this.textCache.get(number);
+    if (cached !== undefined) return cached;
+    const doc = this.doc;
+    if (!doc) return '';
+    const text = (await (await doc.getPage(number)).getTextContent()).items.map(item => ('str' in item ? item.str : '')).join(' ');
+    this.textCache.set(number, text);
+    return text;
+  }
+
+  /**
+   * Navigates to a hit and marks it. Marks live in a separate absolutely-positioned layer
+   * over the canvas, so the PDF text layer (which owns selection) is never mutated.
+   */
+  async revealSearchMatch(hit: SearchHit): Promise<void> {
+    if (this.disposed || !this.doc) return;
+    await this.render(hit.unit);
+    this.marks.set(hit.unit, hit);
+    this.paintMarks();
+  }
+
+  clearSearchHighlights(): void {
+    this.marks.clear();
+    this.paintMarks();
+  }
+
+  /**
+   * Draws a mark for each remembered hit on the pages currently shown.
+   *
+   * The position is approximate: PDF text items carry no character offsets, so the mark is
+   * placed relative to where the matched string sits within the page's concatenated text.
+   * It is advisory — the page itself is the precise destination.
+   */
+  private paintMarks(): void {
+    const surface = this.surface;
+    if (!surface) return;
+    for (const layer of Array.from(surface.querySelectorAll('.search-marker-layer'))) layer.remove();
+    const layer = document.createElement('div');
+    layer.className = 'search-marker-layer';
+    const matched = this.pages.map(number => this.marks.get(number)).filter((hit): hit is SearchHit => Boolean(hit));
+    if (!matched.length) return;
+    for (const hit of matched) {
+      // Spread the mark down the page by the hit's relative position in the page text, so a
+      // hit near the end marks nearer the bottom. Entirely cosmetic, never used for math.
+      const text = this.textCache.get(hit.unit) ?? '';
+      const ratio = text.length ? hit.start / text.length : 0;
+      const mark = document.createElement('div');
+      mark.className = 'search-marker';
+      mark.style.top = `${Math.min(92, Math.max(2, ratio * 100))}%`;
+      layer.append(mark);
+    }
+    surface.append(layer);
+  }
+
   async navigate(action: Parameters<ReaderAdapter['navigate']>[0]) {
     if (!this.doc) return;
     if (action === 'back') { const old = this.history.pop(); if (old) await this.restore(old); return; }
