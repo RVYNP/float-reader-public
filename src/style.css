@@ -3,6 +3,8 @@
  * Each value is light-dark(light, dark); the root's color-scheme (from data-theme, set
  * before first paint by public/theme-boot.js and kept by src/theme.ts) picks the column.
  * Families apply to the root and to any element carrying data-palette (theme previews).
+ * The token approach and theme design are inspired by Tern by Stencil (https://stencil.so/tern);
+ * the Graphite family uses Tern's published default palette.
  */
 :root, [data-palette='lilac'] {
   --chrome: light-dark(#e4e2e9, #17161c);

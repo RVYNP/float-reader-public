@@ -201,8 +201,17 @@ npm run dev         # or try the interface in a browser
 | [Requirements](docs/floating-reader-prd.md) · [Research](docs/floating-reader-research-2026-10-22.md) | Why it works the way it does |
 | [Status](docs/floating-reader-implementation.md) · [Performance](docs/floating-reader-performance.md) · [macOS audit](docs/floating-reader-macos-and-performance-audit.md) | What's verified, what's measured, what's next |
 
+## Credits
+
+The look and theme system are inspired by [Tern](https://stencil.so/tern) by
+[Stencil](https://stencil.so). Its quiet, airy styling, its light/dark design tokens and its theme
+picker that previews on hover shaped Float Reader's Appearance panel. The Graphite theme follows
+the default palette in [Tern's published theme tokens](https://docs.stencil.so/tern/styles/variables.html).
+Thank you to the Stencil team.
+
+Sample text in the screenshots is from public-domain editions of *Pride and Prejudice* and
+*Alice's Adventures in Wonderland* via Project Gutenberg.
+
 ## License
 
 [MIT](LICENSE). Third-party components keep their own licenses; see [THIRD_PARTY.md](THIRD_PARTY.md).
-Sample text in the screenshots is from public-domain editions of *Pride and Prejudice* and
-*Alice's Adventures in Wonderland* via Project Gutenberg.
