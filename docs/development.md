@@ -114,12 +114,18 @@ The screenshots in `docs/media/` come from `scripts/reshoot-media.mjs`. Start th
 node scripts/reshoot-media.mjs photoengravingp00wilkgoog.pdf Photoshop-UXP-Docs.epub
 ```
 
-It writes every image the README uses except the hero, including the five-family theme sheet, which
+It writes every still the README uses except the hero, including the five-family theme sheet, which
 it builds from the public-domain opening of *Pride and Prejudice*. The hero is a composite made in
 the design file (`floatreader.pen`, Hero frame of the README mock): the script writes the
 raw window shots it needs as `hero-app-light.png` and `hero-app-dark.png` (ignored by git), and the
-Hero frame is exported at 2× to `hero-light.png` and `hero-dark.png`. Never commit in-copyright
-scans; the README's Credits section names the documents in use.
+Hero frame is exported at 2× to `hero-light.png` and `hero-dark.png`.
+
+The animated library demo (`library-resize-light.gif` and `library-resize-dark.gif`) comes from
+`node scripts/record-library-demo.mjs photoengravingp00wilkgoog.pdf`. It drives the real interface
+with a drawn cursor, steps every CSS animation one frame at a time so each run is identical, and
+encodes with ffmpeg's two-pass palette (Homebrew's build; set `FFMPEG` to use another).
+
+Never commit in-copyright scans; the README's Credits section names the documents in use.
 
 ## Security model
 

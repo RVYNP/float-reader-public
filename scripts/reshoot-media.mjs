@@ -119,8 +119,8 @@ for (const scheme of ['light', 'dark']) {
   console.log('hand-tool');
 }
 
-// library drawer over the page, then dragged wider.
-// The drawer is open by default; the handle carries role=separator.
+// library drawer over the page (the animated resize demo is scripts/record-library-demo.mjs).
+// The drawer is open by default at this width.
 for (const scheme of ['light', 'dark']) {
   const { ctx, page } = await open(browser, { scheme, viewport: READING });
   await loadFile(page, PDF, 9000);
@@ -131,17 +131,6 @@ for (const scheme of ['light', 'dark']) {
   });
   await page.waitForTimeout(900);
   await shot(page, `library-${scheme}.png`);
-
-  const box = await page.locator('[role="separator"]').boundingBox();
-  if (!box || !box.width) throw new Error('library resize handle not found');
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-  await page.mouse.down();
-  await page.mouse.move(box.x + box.width / 2 + 240, box.y + box.height / 2, { steps: 24 });
-  await page.mouse.up();
-  await page.waitForTimeout(900);
-  const width = await page.evaluate(() => document.querySelector('[role="separator"]')?.getAttribute('aria-valuenow'));
-  console.log(`  library width after drag: ${width}`);
-  await shot(page, `library-resize-${scheme}.png`);
   await ctx.close();
   console.log('library-' + scheme);
 }
