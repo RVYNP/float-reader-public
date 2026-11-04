@@ -5,7 +5,7 @@ Hold My Brief for you. Copy this into your assistant:
 
 ```text
 Install Hold My Brief on this computer by following the instructions in
-https://github.com/RVYNP/float-reader-public/blob/main/docs/agent-setup.md
+https://github.com/RVYNP/hold-my-brief/blob/main/docs/agent-setup.md
 Ask me before anything that needs administrator rights, and tell me what you did when you finish.
 ```
 
@@ -17,7 +17,7 @@ Everything below is written for the agent.
 
 You are installing **Hold My Brief** (previously developed under the name Float Reader), a small
 always-on-top desktop reader for PDF, EPUB, Markdown, text
-and images, from `https://github.com/RVYNP/float-reader-public`. Work through these steps in order and
+and images, from `https://github.com/RVYNP/hold-my-brief`. Work through these steps in order and
 stop to ask the user whenever a step says so.
 
 ### Ground rules
@@ -54,7 +54,7 @@ Find the operating system and CPU architecture:
 Read the latest release:
 
 ```sh
-curl -fsSL https://api.github.com/repos/RVYNP/float-reader-public/releases/latest
+curl -fsSL https://api.github.com/repos/RVYNP/hold-my-brief/releases/latest
 ```
 
 Use `tag_name` and the `assets[].browser_download_url` values. Asset names follow this pattern:
@@ -119,8 +119,8 @@ Follow [docs/development.md](development.md); in short:
 2. Get the code and dependencies:
 
    ```sh
-   git clone https://github.com/RVYNP/float-reader-public.git
-   cd float-reader-public
+   git clone https://github.com/RVYNP/hold-my-brief.git
+   cd hold-my-brief
    npm ci          # also applies the required foliate sandbox patch; do not skip it
    ```
 
