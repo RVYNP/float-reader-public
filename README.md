@@ -68,7 +68,8 @@ computer.
     <td valign="top">
       <h3>A library for your references</h3>
       Collect documents into collections, star favorites, search, or point it at a folder of PDFs.
-      Make it wider or narrower and keep it on either side. It never copies or moves your files.
+      It opens as a drawer over the page: widen it, narrow it or move it to either side without the
+      page ever moving. It never copies or moves your files.
     </td>
     <td valign="top">
       <h3>Fits your space</h3>
@@ -99,17 +100,17 @@ computer.
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/media/library-dark.png">
-    <img src="docs/media/library-light.png" alt="The document library beside a PDF in a wide window" width="880">
+    <img src="docs/media/library-light.png" alt="The document library floating over a PDF, with the page unreduced behind it" width="880">
   </picture>
-  <br><sub><b>The library</b> opens beside the page in wider windows, on whichever side you prefer</sub>
+  <br><sub><b>The library</b> floats over the page — put it on either side and the page keeps its place</sub>
 </p>
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/media/library-resize-dark.gif">
-    <img src="docs/media/library-resize-light.gif" alt="Dragging the divider makes the library wider and the page refits; a double-click puts it back" width="720">
+    <source media="(prefers-color-scheme: dark)" srcset="docs/media/library-resize-dark.png">
+    <img src="docs/media/library-resize-light.png" alt="Dragging the divider makes the library wider while the page stays exactly where it is; a double-click puts it back" width="880">
   </picture>
-  <br><sub><b>Make room</b>: drag the divider and the page refits when you let go; double-click to reset</sub>
+  <br><sub><b>Make it wider</b>: drag the divider and the drawer grows over the page; double-click to reset</sub>
 </p>
 
 <p align="center">

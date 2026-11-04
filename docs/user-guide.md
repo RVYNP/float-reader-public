@@ -134,18 +134,22 @@ menu separately clears recents and saved reading data; neither deletes documents
 
 ## Document library
 
-Use the sidebar button at the left of the toolbar, or **Ctrl+B**, to open the library. At widths of
-720 pixels and above it sits beside the reading panel; in compact windows it overlays the panel and
-closes after you open a document. Escape dismisses it. Wide and compact visibility preferences are
-remembered separately.
+Use the sidebar button at the left of the toolbar, or **Ctrl+B**, to open the library. It opens as a
+drawer that floats over the reading panel at every width, so opening, closing, resizing or moving it
+never changes the page's size, zoom or place. Escape closes the drawer while focus is inside it. Wide
+and compact visibility preferences are remembered separately.
 
-In the side-by-side layout, drag the divider between the library and the reading panel to resize the
-library (240–520 pixels, never more than 55% of the window, and always leaving the reading panel at
-least 320 pixels). Double-click the divider to reset it to 270 pixels. The divider is also
-focusable: Left and Right resize by 16 pixels (Shift: 64), Home and End jump to the narrowest and
-widest sizes, and Enter resets. The page refits once when you release the divider. The header button
-beside **×** moves the library to the other side of the reading panel; the compact overlay follows
-the same side. Width and side are remembered, and the width is re-fitted when the window shrinks.
+Drag the divider between the drawer and the page to resize the drawer (240–520 pixels, and never more
+than 55% of the window, which keeps at least 320 pixels of the reading panel clear beside it). Because
+the drawer floats over the page, a wider drawer covers more of the page. Double-click the divider to
+reset it to 270 pixels. The divider is also focusable: Left and Right resize by 16 pixels
+(Shift: 64), Home and End jump to the narrowest and widest sizes, and Enter resets. The header button
+beside **×** moves the drawer to the other side of the reading panel; compact windows follow the same
+side. Width and side are remembered, and the width is re-fitted when the window shrinks.
+
+In compact windows (below 720 pixels) the drawer covers the reading panel behind a scrim, cannot be
+resized, and closes on a click outside it or after you open a document from it. Escape closes it
+while focus is inside the drawer.
 
 - **Add files** selects several documents or images at once without opening them. Select a
   collection first to add new entries directly to it.
