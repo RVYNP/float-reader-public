@@ -26,6 +26,7 @@
   --accent-border: light-dark(#c4bcf1, #4a4385);
   --accent-fill: light-dark(#6358d8, #6a5fd8);
   --scrim: light-dark(#2823333d, #0000008c);
+  --search-hit: light-dark(#ffe08a, #6f5a1e);
 }
 [data-palette='birch'] {
   --chrome: light-dark(#e8e5de, #181613);
@@ -47,6 +48,7 @@
   --accent-border: light-dark(#e3c2af, #6e4a35);
   --accent-fill: light-dark(#a85632, #b0603a);
   --scrim: light-dark(#2a24183d, #0000008c);
+  --search-hit: light-dark(#f6dfa6, #6a5426);
 }
 [data-palette='graphite'] {
   --chrome: light-dark(#efefec, #08080a);
@@ -68,6 +70,7 @@
   --accent-border: light-dark(#bccbfa, #2c4580);
   --accent-fill: light-dark(#2f63f0, #2a5fe0);
   --scrim: light-dark(#f4f4f180, #0000008c);
+  --search-hit: light-dark(#d9d68a, #55542a);
 }
 [data-palette='arctic'] {
   --chrome: light-dark(#e2e7ed, #0e1318);
@@ -89,6 +92,7 @@
   --accent-border: light-dark(#b2d4e6, #285468);
   --accent-fill: light-dark(#22729a, #2a7499);
   --scrim: light-dark(#1a26333d, #0000008c);
+  --search-hit: light-dark(#c9e0a8, #3d5230);
 }
 /* Page tones recolor only text documents (Markdown, TXT, reflowable EPUB). */
 [data-page='white'] { --paper: #ffffff; --ink: #1b1b1f; }
@@ -298,3 +302,26 @@ dd { margin: 0; color: var(--muted); }
   #empty { padding-top: 64px; }
   h1 { font-size: 42px; }
 }
+
+/* Command palette (Ctrl+K): a search field over the same actions the menu lists.
+   The dialog overrides the shared dialog chrome so the input sits flush at the top. */
+#palette { width: min(520px, calc(100vw - 24px)); padding: 0; overflow: hidden; max-height: calc(100dvh - 40px); display: flex; flex-direction: column; }
+#palette:not([open]) { display: none; }
+.palette-search { display: flex; align-items: center; gap: 8px; padding: 11px 13px; border-bottom: 1px solid var(--border); color: var(--muted); flex-shrink: 0; }
+.palette-search svg { flex-shrink: 0; }
+#palette-input { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--fg); font: inherit; font-size: 13px; outline: none; }
+#palette-input::placeholder { color: var(--faint); }
+.palette-esc { flex-shrink: 0; }
+.palette-list { overflow-y: auto; overscroll-behavior: contain; padding: 6px; min-height: 0; }
+.palette-group { font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); padding: 8px 8px 3px; }
+.palette-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 9px; border-radius: 5px; font-size: 12px; cursor: default; }
+.palette-row[aria-selected="true"] { background: var(--accent-soft); color: var(--accent-ink); }
+.palette-row[aria-selected="true"] kbd { color: var(--accent-ink); border-color: var(--accent-border); background: transparent; }
+.palette-row[aria-disabled="true"] { color: var(--faint); }
+.palette-row[aria-disabled="true"][aria-selected="true"] { background: var(--hover); color: var(--muted); }
+.palette-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.palette-hint { font-size: 10px; color: var(--faint); white-space: nowrap; }
+.palette-empty { margin: 0; padding: 16px 13px 18px; font-size: 12px; color: var(--muted); text-align: center; }
+
+/* Find in document (Ctrl+F): a compact bar above the reading panel, not a floating
+   overlay, so it never covers the text it is searching. */
