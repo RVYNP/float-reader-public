@@ -1,0 +1,13 @@
+<!-- The app mark as text, so the repository keeps its no-binary-image-assets rule. It mirrors the
+     artwork src-tauri/build.rs draws for the platform icons: a 64-unit grid, a dark rounded square
+     (radius 13), a light page from x 14-50 / y 10-54, and three ink rules at y 22, 32 and 42.
+     The browser asks for a favicon on load; without this the dev server answers 404. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="13" fill="#262A2F"/>
+  <rect x="14" y="10" width="36" height="44" fill="#E2EEF6"/>
+  <g fill="#436886">
+    <rect x="20" y="22" width="24" height="1"/>
+    <rect x="20" y="32" width="24" height="1"/>
+    <rect x="20" y="42" width="24" height="1"/>
+  </g>
+</svg>
