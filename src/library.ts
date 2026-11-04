@@ -119,7 +119,10 @@ export function createLibrary(root: HTMLElement, callbacks: Callbacks): { refres
   const viewport = () => layout?.clientWidth || window.innerWidth;
   function applyWidth(next: number) {
     const bounds = libraryWidthBounds(viewport()); width = clampLibraryWidth(next, viewport());
-    root.style.setProperty('--library-width', `${width}px`); tipValue.textContent = `${width} px`;
+    // Published on the layout as well as the panel: the opening strip spans the reading panel, and
+    // layout would otherwise not know how much of the row the library has taken.
+    root.style.setProperty('--library-width', `${width}px`); layout?.style.setProperty('--library-width', `${width}px`);
+    tipValue.textContent = `${width} px`;
     resizeHandle.setAttribute('aria-valuenow', String(width)); resizeHandle.setAttribute('aria-valuetext', `${width} pixels wide`);
     resizeHandle.setAttribute('aria-valuemin', String(bounds.min)); resizeHandle.setAttribute('aria-valuemax', String(bounds.max));
   }
