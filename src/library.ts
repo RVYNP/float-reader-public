@@ -62,11 +62,13 @@ function orderedTree<T extends { id: string; name: string; parentId: string | nu
 }
 
 export function createLibrary(root: HTMLElement, callbacks: Callbacks): { refresh: (activePath?: string) => Promise<void>; toggle: () => void } {
+  // Drawer mode: at >=720 px the library is a resizable drawer floating over the page; below it
+  // becomes a compact sheet with a scrim, a focus trap and workspace `inert`.
   const wide = window.matchMedia('(min-width: 720px)');
   const layout = document.getElementById('reader-layout');
   const toggleButton = document.getElementById('library-toggle');
   const workspace = document.getElementById('workspace');
-  const preferenceKey = () => `float-reader:library-${wide.matches ? 'wide' : 'narrow'}`;
+  const preferenceKey = () => `hold-my-brief:library-${wide.matches ? 'wide' : 'narrow'}`;
   function preference() { try { const saved = localStorage.getItem(preferenceKey()); return saved === null ? wide.matches : saved === 'open'; } catch { return wide.matches; } }
   let visible = preference(); let library: Library = emptyLibrary(); let filter: Filter = { kind: 'all' };
   let activePath: string | undefined; let busy = false, loaded = false, revision = 0, page = 0;
@@ -111,17 +113,20 @@ export function createLibrary(root: HTMLElement, callbacks: Callbacks): { refres
   root.replaceChildren(backdrop, panel, resizeHandle);
   const imageNavigation = element('div', 'library-image-navigation'); imageNavigation.hidden = true; imageNavigation.setAttribute('aria-label', 'Images in selected collection'); imageNavigation.setAttribute('role', 'group'); workspace?.append(imageNavigation);
 
-  // Side-by-side width and dock side. The stored width is the user's preference; the applied
-  // width is re-clamped to the current window so growing the window restores it.
-  const widthKey = 'float-reader:library-width', sideKey = 'float-reader:library-side';
+  // Drawer width and dock side. The drawer floats over the reading panel, so its width never
+  // affects the page. The stored width is the user's preference; the applied width is re-clamped
+  // to the current window so growing the window restores it.
+  const widthKey = 'hold-my-brief:library-width', sideKey = 'hold-my-brief:library-side';
   let preferredWidth = parseLibraryWidth(savedPreference(widthKey)); let width: number = libraryWidth.default;
   let side: LibrarySide = savedPreference(sideKey) === 'right' ? 'right' : 'left';
   const viewport = () => layout?.clientWidth || window.innerWidth;
   function applyWidth(next: number) {
     const bounds = libraryWidthBounds(viewport()); width = clampLibraryWidth(next, viewport());
-    // Published on the layout as well as the panel: the opening strip spans the reading panel, and
-    // layout would otherwise not know how much of the row the library has taken.
-    root.style.setProperty('--library-width', `${width}px`); layout?.style.setProperty('--library-width', `${width}px`);
+    // Set on the root (it declares its own --library-width, which would shadow an inherited one)
+    // and on the layout: the workspace reads it to keep the floating view controls clear of a
+    // right-docked drawer, and the opening strip spans the reading panel beside the library.
+    root.style.setProperty('--library-width', `${width}px`);
+    layout?.style.setProperty('--library-width', `${width}px`);
     tipValue.textContent = `${width} px`;
     resizeHandle.setAttribute('aria-valuenow', String(width)); resizeHandle.setAttribute('aria-valuetext', `${width} pixels wide`);
     resizeHandle.setAttribute('aria-valuemin', String(bounds.min)); resizeHandle.setAttribute('aria-valuemax', String(bounds.max));
@@ -133,11 +138,10 @@ export function createLibrary(root: HTMLElement, callbacks: Callbacks): { refres
     dock.innerHTML = panelIcon[other]; dock.setAttribute('aria-label', `Move library to the ${other}`); dock.title = `Move library to the ${other}`;
   }
   dock.onclick = () => { side = side === 'left' ? 'right' : 'left'; savePreference(sideKey, side); applySide(); };
-  // While dragging, only the panels move: reader hosts keep their width (anchored away from the
-  // handle) so adapters refit once, through their ResizeObserver, when the drag ends.
+  // While dragging, only the drawer follows the pointer; it is out of flow, so the reading panel,
+  // the page box and the canvas bitmap keep their exact geometry and never refit.
   let drag: { pointer: number; x: number; start: number; next?: number } | undefined; let dragFrame = 0;
   function setResizing(on: boolean) {
-    if (on && workspace) workspace.style.setProperty('--reader-frozen-width', `${workspace.clientWidth}px`);
     document.documentElement.classList.toggle('library-resizing', on);
   }
   resizeHandle.addEventListener('pointerdown', event => {

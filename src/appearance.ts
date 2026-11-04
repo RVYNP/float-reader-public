@@ -2,18 +2,18 @@ import { appearance, applyAppearance, palettes, readingColors, rgbToHex, saveApp
 
 const icon = (size: number, body: string) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
 export const paletteIcon = icon(14, '<circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.93 0 1.65-.75 1.65-1.69 0-.44-.18-.84-.44-1.13-.29-.29-.44-.65-.44-1.13a1.64 1.64 0 0 1 1.67-1.67h2c3.05 0 5.55-2.5 5.55-5.55C21.97 6.01 17.46 2 12 2z"/>');
-const names: Record<Palette, string> = { lilac: 'Lilac', birch: 'Birch', graphite: 'Graphite', arctic: 'Arctic' };
+const names: Record<Palette, string> = { brief: 'Brief', lilac: 'Lilac', birch: 'Birch', graphite: 'Graphite', arctic: 'Arctic' };
 const modes: [AppearanceMode, string, string][] = [
   ['system', 'System', icon(13, '<rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8m-4-4v4"/>')],
   ['light', 'Light', icon(13, '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>')],
   ['dark', 'Dark', icon(13, '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>')],
 ];
 /** Accent presets offered beside the theme's own accent; any other color is a custom accent. */
-const presets: [string, string][] = [['Iris', '#a86af4'], ['Blue', '#3d6fff'], ['Teal', '#2b8a84'], ['Rose', '#c2456b'], ['Moss', '#5f8a3a'], ['Amber', '#c27a1a']];
+const presets: [string, string][] = [['Acid', '#e13a3a'], ['Iris', '#a86af4'], ['Blue', '#3d6fff'], ['Teal', '#2b8a84'], ['Rose', '#c2456b'], ['Moss', '#5f8a3a'], ['Amber', '#c27a1a']];
 const tones: [PageTone, string][] = [['theme', 'Match theme'], ['white', 'White'], ['sepia', 'Sepia'], ['dim', 'Dim']];
 const restingHint = 'Hover a theme to try it on the whole window. Click to keep it.';
 
-/** Menu label for the kept appearance, e.g. "Lilac · System". */
+/** Menu label for the kept appearance, e.g. "Brief · System". */
 export function appearanceSummary() {
   const kept = appearance();
   return `${names[kept.palette]} · ${modes.find(([mode]) => mode === kept.mode)![1]}`;

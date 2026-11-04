@@ -1,4 +1,4 @@
-; Float Reader appears in Explorer's "Open with" for its document types but never
+; Hold My Brief appears in Explorer's "Open with" for its document types but never
 ; takes over the default handler (PRD packaging gate: Open With registration must
 ; not take defaults).
 ;
@@ -9,22 +9,22 @@
 ; the uninstaller restores the same default. After uninstall the leftovers go.
 ;
 ; The ProgID and extensions mirror bundle.fileAssociations in tauri.conf.json.
-!define FLOAT_READER_PROGID "Reading document"
+!define HOLD_MY_BRIEF_PROGID "Hold My Brief document"
 
-!macro FLOAT_READER_OFFER_OPEN_WITH EXT
-  ReadRegStr $R0 SHCTX "Software\Classes\.${EXT}" "${FLOAT_READER_PROGID}_backup"
+!macro HOLD_MY_BRIEF_OFFER_OPEN_WITH EXT
+  ReadRegStr $R0 SHCTX "Software\Classes\.${EXT}" "${HOLD_MY_BRIEF_PROGID}_backup"
   ${If} $R0 == ""
     DeleteRegValue SHCTX "Software\Classes\.${EXT}" ""
   ${Else}
     WriteRegStr SHCTX "Software\Classes\.${EXT}" "" "$R0"
   ${EndIf}
-  WriteRegStr SHCTX "Software\Classes\.${EXT}\OpenWithProgids" "${FLOAT_READER_PROGID}" ""
+  WriteRegStr SHCTX "Software\Classes\.${EXT}\OpenWithProgids" "${HOLD_MY_BRIEF_PROGID}" ""
 !macroend
 
-!macro FLOAT_READER_REMOVE_OPEN_WITH EXT
-  DeleteRegValue SHCTX "Software\Classes\.${EXT}\OpenWithProgids" "${FLOAT_READER_PROGID}"
+!macro HOLD_MY_BRIEF_REMOVE_OPEN_WITH EXT
+  DeleteRegValue SHCTX "Software\Classes\.${EXT}\OpenWithProgids" "${HOLD_MY_BRIEF_PROGID}"
   DeleteRegKey /ifempty SHCTX "Software\Classes\.${EXT}\OpenWithProgids"
-  DeleteRegValue SHCTX "Software\Classes\.${EXT}" "${FLOAT_READER_PROGID}_backup"
+  DeleteRegValue SHCTX "Software\Classes\.${EXT}" "${HOLD_MY_BRIEF_PROGID}_backup"
   ; APP_UNASSOCIATE writes an empty default when there was none before install.
   ReadRegStr $R0 SHCTX "Software\Classes\.${EXT}" ""
   ${If} $R0 == ""
@@ -34,19 +34,19 @@
 !macroend
 
 !macro NSIS_HOOK_POSTINSTALL
-  !insertmacro FLOAT_READER_OFFER_OPEN_WITH "pdf"
-  !insertmacro FLOAT_READER_OFFER_OPEN_WITH "epub"
-  !insertmacro FLOAT_READER_OFFER_OPEN_WITH "md"
-  !insertmacro FLOAT_READER_OFFER_OPEN_WITH "markdown"
-  !insertmacro FLOAT_READER_OFFER_OPEN_WITH "txt"
+  !insertmacro HOLD_MY_BRIEF_OFFER_OPEN_WITH "pdf"
+  !insertmacro HOLD_MY_BRIEF_OFFER_OPEN_WITH "epub"
+  !insertmacro HOLD_MY_BRIEF_OFFER_OPEN_WITH "md"
+  !insertmacro HOLD_MY_BRIEF_OFFER_OPEN_WITH "markdown"
+  !insertmacro HOLD_MY_BRIEF_OFFER_OPEN_WITH "txt"
   !insertmacro UPDATEFILEASSOC
 !macroend
 
 !macro NSIS_HOOK_POSTUNINSTALL
-  !insertmacro FLOAT_READER_REMOVE_OPEN_WITH "pdf"
-  !insertmacro FLOAT_READER_REMOVE_OPEN_WITH "epub"
-  !insertmacro FLOAT_READER_REMOVE_OPEN_WITH "md"
-  !insertmacro FLOAT_READER_REMOVE_OPEN_WITH "markdown"
-  !insertmacro FLOAT_READER_REMOVE_OPEN_WITH "txt"
+  !insertmacro HOLD_MY_BRIEF_REMOVE_OPEN_WITH "pdf"
+  !insertmacro HOLD_MY_BRIEF_REMOVE_OPEN_WITH "epub"
+  !insertmacro HOLD_MY_BRIEF_REMOVE_OPEN_WITH "md"
+  !insertmacro HOLD_MY_BRIEF_REMOVE_OPEN_WITH "markdown"
+  !insertmacro HOLD_MY_BRIEF_REMOVE_OPEN_WITH "txt"
   !insertmacro UPDATEFILEASSOC
 !macroend

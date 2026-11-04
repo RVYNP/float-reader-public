@@ -12,7 +12,7 @@ impl Catalog {
         connection.busy_timeout(Duration::from_secs(5)).map_err(|e| e.to_string())?;
         connection.execute_batch("PRAGMA foreign_keys=ON; PRAGMA synchronous=FULL;").map_err(|e| e.to_string())?;
         let version: i64 = connection.query_row("PRAGMA user_version", [], |r| r.get(0)).map_err(|e| e.to_string())?;
-        if version > 1 { return Err("This library was created by a newer Float Reader. It has not been changed.".into()); }
+        if version > 1 { return Err("This library was created by a newer Hold My Brief. It has not been changed.".into()); }
         let transaction = connection.transaction().map_err(|e| e.to_string())?;
         transaction.execute_batch(
             "CREATE TABLE IF NOT EXISTS catalog_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);

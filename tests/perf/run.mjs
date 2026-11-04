@@ -281,7 +281,7 @@ if (args.record) await writeFile(args.record, JSON.stringify(report, null, 2));
 if (args.json) { console.log(JSON.stringify(report, null, 2)); }
 else {
   const fmt = value => value === null || value === undefined ? 'n/a' : typeof value === 'number' ? (value >= 100 ? Math.round(value) : Math.round(value * 10) / 10) : value;
-  console.log(`\nFloat Reader performance · ${report.platform} · Chromium ${report.browser}\n`);
+  console.log(`\nHold My Brief performance · ${report.platform} · Chromium ${report.browser}\n`);
   if (report.suites.pdf) {
     const pdf = report.suites.pdf;
     console.log('PDF (120 pages, text)');

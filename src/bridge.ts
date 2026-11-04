@@ -35,7 +35,7 @@ async function readBrowserFile(file: File, path?: string): Promise<Opened> {
   const buffer = await file.arrayBuffer();
   const digest = await crypto.subtle.digest('SHA-256', buffer);
   const id = Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('');
-  const saved = localStorage.getItem(`float-preview:${id}`);
+  const saved = localStorage.getItem(`hold-my-brief:${id}`);
   const doc: Opened = { id, path: path ?? `${id}/${file.name}`, name: file.name, format, bytes: new Uint8Array(buffer), previousState: saved ? JSON.parse(saved) : undefined };
   pendingFiles.set(doc, file);
   return doc;
@@ -118,7 +118,7 @@ export async function confirmDocument(doc: Opened): Promise<void> {
 }
 export async function persist(doc: Opened, locator: Locator, options: ReaderOptions) {
   if (desktop) await native('save_position', { id: doc.id, path: doc.path, name: doc.name, format: doc.format, locator, options });
-  else localStorage.setItem(`float-preview:${doc.id}`, JSON.stringify({ locator, options }));
+  else localStorage.setItem(`hold-my-brief:${doc.id}`, JSON.stringify({ locator, options }));
 }
 export async function openExternal(url: string) {
   if (!/^https?:\/\//i.test(url)) throw Error('Only web links can be opened externally.');

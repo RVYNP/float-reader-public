@@ -215,29 +215,69 @@ test('opening a document reveals the page at its settled size and rasterises it 
   }
 });
 
-test('library resizes by drag, keyboard and double-click, docks right, persists, and refits the PDF once', async ({ page }) => {
+test('library drawer floats over the page and never resizes it, while drag, keyboard, double-click, right dock and persistence still work', async ({ page }) => {
   await page.setViewportSize({ width: 1080, height: 680 });
   await page.goto('/');
   await page.locator('#file-input').setInputFiles({ name: 'library-resize.pdf', mimeType: 'application/pdf', buffer: pdfFixture() });
   await expect(page.locator('#position')).toContainText('Page 1 of 3');
   await expect(page.locator('.pdf-render-status')).toHaveCount(0);
+  // The 47 px loading bar changes the host height, so the first canvas sizing can be the
+  // loading-visible fit (325x487 instead of 356x534). Wait for the bar to go before touching
+  // anything else.
+  await expect(page.locator('#loading')).toBeHidden();
   const handle = page.getByRole('separator', { name: 'Resize library' });
-  const panel = page.locator('.library-panel'), host = page.locator('.pdf-reader');
+  const panel = page.locator('.library-panel'), host = page.locator('.pdf-reader'), workspace = page.locator('#workspace');
+  const canvas = page.locator('.pdf-page canvas');
+  // The library is open by default at >=720 px, so close it to measure the untouched page first.
+  await page.locator('#library-toggle').click();
+  await expect(page.locator('#library-root')).toBeHidden();
+  // Everything the drawer must leave alone: the reading panel's box, its client width, the page
+  // box and the backing bitmap. Any of those changing when the drawer opens, is dragged or is
+  // docked is exactly the regression this test exists for (it used to shrink #workspace and
+  // refit the PDF).
+  const pageGeometry = async () => ({
+    workspace: await workspace.boundingBox(),
+    hostClientWidth: await host.evaluate(el => el.clientWidth),
+    canvasBox: await canvas.boundingBox(),
+    bitmap: await canvas.evaluate((el: HTMLCanvasElement) => ({ width: el.width, height: el.height })),
+  });
+  // Hiding the loading bar is not enough: a pre-existing deferred ResizeObserver re-applies the fit
+  // roughly 100 ms later (see the note in the loading-geometry test above), so the very first
+  // samples can still be a mid-flight page. Sample until two reads 200 ms apart agree -- the
+  // baseline must be the settled page, otherwise this comparison measures the pending refit
+  // instead of the drawer. Any refit *after* this point is the regression under test.
+  await expect.poll(async () => {
+    const before = JSON.stringify(await pageGeometry());
+    await page.waitForTimeout(200);
+    return JSON.stringify(await pageGeometry()) === before;
+  }, { timeout: 5000 }).toBe(true);
+  const untouched = await pageGeometry();
+  // Absolute, layout-stable expectations only: the workspace and host widths. The bitmap stays in
+  // the relative pageGeometry() comparison below, which is the actual regression guard -- pinning
+  // its exact pixel size here would depend on the loading-bar race described above.
+  expect(untouched.workspace!.width).toBe(1068);
+  expect(untouched.hostClientWidth).toBe(1066);
+
+  // Opening the drawer rolls over the page instead of narrowing it.
+  await page.locator('#library-toggle').click();
+  await expect(page.locator('#library-root')).toBeVisible();
   await expect(handle).toHaveAttribute('aria-valuenow', '270');
+  expect(await pageGeometry()).toEqual(untouched);
+
   const box = (await handle.boundingBox())!, y = box.y + box.height / 2;
-  const hostWidth = await host.evaluate(el => el.clientWidth);
   await page.mouse.move(box.x + 5, y); await page.mouse.down();
   await page.mouse.move(box.x + 45, y, { steps: 6 });
-  // The panels follow the pointer live; the reader host keeps its width until release.
+  // The drawer follows the pointer live; the page underneath must not move or refit.
   await expect(handle).toHaveAttribute('aria-valuenow', '310');
-  expect(await host.evaluate(el => el.clientWidth)).toBe(hostWidth);
+  expect(await pageGeometry()).toEqual(untouched);
   await page.mouse.move(box.x + 75, y, { steps: 6 }); await page.mouse.up();
   await expect(handle).toHaveAttribute('aria-valuenow', '340');
   expect(Math.round((await panel.boundingBox())!.width)).toBe(340);
-  await expect.poll(() => host.evaluate(el => el.clientWidth)).toBe(hostWidth - 70);
+  expect(await pageGeometry()).toEqual(untouched);
   await expect(page.locator('.pdf-render-status')).toHaveCount(0);
   await page.waitForTimeout(450); // Several resize-debounce periods must remain idle.
   await expect(page.locator('.pdf-page')).toHaveCount(1);
+  expect(await pageGeometry()).toEqual(untouched);
 
   await handle.focus();
   for (const [key, width] of [['ArrowRight', 356], ['Shift+ArrowLeft', 292], ['End', 520], ['Home', 240], ['Enter', 270], ['End', 520]] as const) {
@@ -248,8 +288,10 @@ test('library resizes by drag, keyboard and double-click, docks right, persists,
 
   await page.getByRole('button', { name: 'Move library to the right' }).click();
   await expect(page.getByRole('button', { name: 'Move library to the left' })).toBeVisible();
-  const docked = async () => (await panel.boundingBox())!.x > (await page.locator('#workspace').boundingBox())!.x;
+  const docked = async () => (await panel.boundingBox())!.x > (await workspace.boundingBox())!.x;
   expect(await docked()).toBe(true);
+  // Mirroring the drawer is a pure overlay too: the page keeps its box and its bitmap.
+  expect(await pageGeometry()).toEqual(untouched);
   await page.reload();
   await expect(handle).toHaveAttribute('aria-valuenow', '334');
   expect(await docked()).toBe(true);

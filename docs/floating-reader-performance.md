@@ -1,4 +1,4 @@
-# Float Reader performance
+# Hold My Brief performance
 
 Measured on an Apple-silicon Mac (macOS 27.2, arm64) with Node 24 and headless Chromium 153.
 Numbers describe the **reader's own work** — decode, layout, paint and adapter logic — not the

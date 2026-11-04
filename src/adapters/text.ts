@@ -93,7 +93,7 @@ export function renderMarkdown(source: string): { html: string; outline: Outline
   md.renderer.rules.image = (tokens, index) => {
     const token = tokens[index], input = String(token.attrGet('src') ?? ''), relative = localImagePath(input);
     const alt = token.content || 'Document image';
-    return `<span class="reader-image-placeholder" role="img" aria-label="${escape(alt)}"${relative ? ` data-relative-image="${escape(relative)}"` : ''}>${escape(alt)} — ${relative ? 'image unavailable' : 'external or out-of-scope image blocked'}</span>`;
+    return `<span class="reader-image-placeholder" role="img" aria-label="${escape(alt)}"${relative ? ` data-relative-image="${escape(relative)}"` : ''}>${escape(alt)} (${relative ? 'image unavailable' : 'external or out-of-scope image blocked'})</span>`;
   };
   md.renderer.rules.link_open = (tokens, index) => {
     const href = String(tokens[index].attrGet('href') ?? '');

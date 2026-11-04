@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { clampLibraryWidth, libraryWidthBounds, parseLibraryWidth } from '../src/library-layout';
 
-describe('side-by-side library width', () => {
+// Bounds for the floating drawer's width: the drawer overlays the page, but these limits still
+// guarantee the reading panel keeps a usable strip of page visible.
+describe('library drawer width', () => {
   it('caps at 520 px, then 55% of the window, then a 320 px reading panel', () => {
     expect(libraryWidthBounds(1400)).toEqual({ min: 240, max: 520 });
     expect(libraryWidthBounds(800)).toEqual({ min: 240, max: 440 });
