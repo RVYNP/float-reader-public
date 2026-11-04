@@ -1,16 +1,29 @@
-.library-root { --library-width: 270px; position: relative; display: flex; flex: 0 0 auto; width: calc(var(--library-width) + 10px); min-width: 0; min-height: 0; margin: 0 0 0 6px; }
-.library-panel { display: flex; flex-direction: column; flex: 1 1 auto; height: 100%; min-width: 0; min-height: 0; padding: 10px; overflow: auto; border: 1px solid var(--border); border-radius: 9px; background: var(--raise); scrollbar-width: thin; scrollbar-color: var(--faint) transparent; }
+/* The library is an out-of-flow drawer over the reading panel at every width: it never takes
+   width from #workspace, so opening, dragging or docking it cannot move or refit the page. */
+.library-root { --library-width: 270px; position: absolute; z-index: 20; top: 0; bottom: 0; left: 0; display: flex; flex: 0 0 auto; width: calc(var(--library-width) + 10px); min-width: 0; min-height: 0; margin: 0 0 0 6px; }
+.library-panel { display: flex; flex-direction: column; flex: 1 1 auto; height: 100%; min-width: 0; min-height: 0; padding: 10px; overflow: auto; border: 1px solid var(--border); border-radius: 9px; background: var(--raise); box-shadow: var(--shadow-drawer); scrollbar-width: thin; scrollbar-color: var(--faint) transparent; }
 .library-panel button, .library-panel input, .library-panel select { font-size: 12px; }
 .library-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-shrink: 0; margin-bottom: 6px; }
 .library-header h2 { margin: 0; font-size: 14px; font-weight: 650; }
 .library-header-actions { display: flex; align-items: center; flex-shrink: 0; }
 .library-header button { display: grid; place-items: center; width: 26px; height: 28px; padding: 0; color: var(--muted); }
 .library-header button:hover { color: var(--fg); }
-/* Resize handle: a 10 px hit area between the library and the reading panel. */
-#reader-layout.library-open > #workspace { margin-left: 0; }
+/* Resize handle: a 10 px hit area between the library and the reading panel. The drawer keeps the
+   geometry of the retired divider, anchored to the 6 px page margin, so the panel stays put. */
 .library-right { flex-direction: row-reverse; }
-.library-right > .library-root { flex-direction: row-reverse; margin: 0 6px 0 0; }
-#reader-layout.library-right.library-open > #workspace { margin: 0 0 0 6px; }
+.library-right > .library-root { left: auto; right: 0; flex-direction: row-reverse; margin: 0 6px 0 0; }
+/* --shadow-drawer casts rightward; a right-docked drawer uses the symmetric popover shadow. */
+.library-right .library-panel { box-shadow: var(--shadow-popover); }
+/* The drawer floats over the page's bottom-right corner, where the reader's view controls sit.
+   A right-docked drawer shifts them out from under itself so zoom/fit/rotate stay reachable. The
+   position is fully specified here (left/right/translate): the workspace `@container` query in
+   style.css only starts matching at 734 px (workspace content width = viewport - 14), so between
+   720 and 733 px the base `left: 50%; translate: -50% 0` still applies and would over-constrain
+   the pill if this rule only set `right`. The applied width is exposed on #reader-layout by
+   applyWidth in library.ts. */
+@media (min-width: 720px) {
+  #reader-layout.library-right.library-open #view-controls { left: auto; right: calc(var(--library-width, 270px) + 16px); translate: none; }
+}
 .library-resize { position: relative; z-index: 2; flex: 0 0 10px; display: grid; place-items: center; cursor: col-resize; touch-action: none; outline: none; }
 .library-resize::before { content: ''; position: absolute; inset: 0 4px; border-radius: 1px; background: var(--accent-border); }
 .library-resize-grip { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; width: 8px; height: 36px; border-radius: 4px; background: var(--accent); }
@@ -25,9 +38,7 @@
 .library-resizing .library-resize .library-resize-tip, .library-resize:focus-visible .library-resize-tip { transition-delay: 0s; }
 .library-resize:focus-visible .library-resize-grip { outline: 2px solid var(--accent); outline-offset: 2px; }
 .library-resizing, .library-resizing * { cursor: col-resize !important; user-select: none; }
-/* Panels move live during a drag; reader hosts keep their width, anchored away from the handle, and refit once on release. */
-.library-resizing .reader-host { width: var(--reader-frozen-width); }
-.library-resizing #reader-layout:not(.library-right) .reader-host { left: auto; }
+/* The panel follows the pointer live; the page underneath never refits, so no reader-host width freeze is needed. */
 #library-toggle[data-library-side=right] svg { transform: scaleX(-1); }
 .library-add { flex-shrink: 0; text-align: center; border-color: var(--accent-border); color: var(--accent-ink); background: var(--accent-soft); font-weight: 600; margin-bottom: 10px; }
 .library-add:hover { background: var(--accent-soft-hover); }
@@ -81,16 +92,15 @@
 .library-remove-confirmation { padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--stage); }
 .library-remove-confirmation p { margin-top: 0; font-size: 12px; }
 .library-remove-confirmation button { margin: 2px 3px 0 0; }
+/* Compact windows: the drawer covers the layout as a sheet over a scrim instead of floating beside it. */
 @media (max-width: 719px) {
   .library-root { position: absolute; z-index: 20; inset: 0; display: block; width: auto; margin: 0; }
-  .library-right > .library-root { margin: 0; }
-  #reader-layout.library-open > #workspace, #reader-layout.library-right.library-open > #workspace { margin: 0 6px; }
+  .library-right > .library-root { inset: 0; margin: 0; }
   .library-resize { display: none; }
   .library-backdrop { display: block; position: absolute; inset: 0; width: 100%; height: 100%; border: 0; padding: 0; border-radius: 0; background: var(--scrim); }
   .library-backdrop:hover { background: var(--scrim); }
-  .library-panel { position: relative; width: min(306px, calc(100% - 38px)); margin-left: 6px; box-shadow: var(--shadow-drawer); }
-  /* --shadow-drawer casts rightward; a right-docked drawer uses the symmetric popover shadow. */
-  .library-right .library-panel { margin: 0 6px 0 auto; box-shadow: var(--shadow-popover); }
+  .library-panel { position: relative; width: min(306px, calc(100% - 38px)); margin-left: 6px; }
+  .library-right .library-panel { margin: 0 6px 0 auto; }
 }
 @media (max-height: 480px) {
   .library-panel { padding: 7px 9px; }
