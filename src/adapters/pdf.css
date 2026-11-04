@@ -15,3 +15,22 @@
 /* Faithful paper shading at the inner edges, identical in every theme because pages stay white. */
 .pdf-spread[data-side=both] .pdf-page::after { content: ''; position: absolute; top: 0; bottom: 0; left: 0; z-index: 3; width: 7.5%; pointer-events: none; background: linear-gradient(to left, transparent, #1e1a2e12); }
 .pdf-spread[data-side=both] .pdf-page:first-child::after { left: auto; right: 0; background: linear-gradient(to right, transparent, #1e1a2e12); }
+
+/* Find results: a band over the page, painted above the text layer but never intercepting
+   pointer events, so text selection and links keep working while a match is marked. */
+.search-marker-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+.search-marker {
+  position: absolute;
+  left: 4%;
+  right: 4%;
+  height: 1.35em;
+  transform: translateY(-50%);
+  background: var(--search-hit, rgb(255 224 138 / 55%));
+  border-radius: 2px;
+  mix-blend-mode: multiply;
+}

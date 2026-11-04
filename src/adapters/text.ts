@@ -1,5 +1,6 @@
 import MarkdownIt, { type Token } from 'markdown-it';
 import type { Locator, OutlineItem, Position, ReaderAdapter, ReaderContext, ReaderOptions, ReaderSource } from '../types';
+import { searchUnits, type DocumentSearch, type SearchHit, type SearchOptions, type UnitText } from '../search';
 
 type SourceBlock = { element: HTMLElement; line: number; endLine: number };
 type TextAnchor = Locator & { line: number; blockLine: number; offset: number; context: string; contextOffset: number; fraction: number };
@@ -121,6 +122,8 @@ const styles = `
 .reader-text-chunk{white-space:pre-wrap;min-height:1lh}
 .reader-text-content[data-wrap="false"] .reader-text-chunk{white-space:pre;overflow-wrap:normal}
 .reader-text-content :focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+/* The current search result: a soft highlight that stays legible in light and dark themes. */
+.reader-text-content mark.search-hit{background:var(--search-hit, #ffe08a);color:inherit;border-radius:2px;padding:0 .5px}
 `;
 
 export class TextAdapter implements ReaderAdapter {
@@ -143,6 +146,8 @@ export class TextAdapter implements ReaderAdapter {
   private frame = 0;
   private imageUrls: string[] = [];
   private listener?: (event: Event) => void;
+  /** `<mark>` elements currently inserted by `revealSearchMatch`, removed on the next reveal. */
+  private marks: HTMLElement[] = [];
 
   async open(source: ReaderSource, host: HTMLElement, context: ReaderContext, options: ReaderOptions): Promise<void> {
     if (source.format !== 'md' && source.format !== 'txt') throw new Error('The text reader supports Markdown and plain text files.');
@@ -366,6 +371,103 @@ export class TextAdapter implements ReaderAdapter {
 
   async setOptions(options: ReaderOptions): Promise<void> { const anchor = this.getPosition().locator; this.applyOptions(options); await this.restore(anchor); }
   outline(): OutlineItem[] { return [...this.headings]; }
+
+  /**
+   * Searches the decoded source, one unit per source line, so every hit knows its line and
+   * absolute offset. Searching the source (rather than the rendered DOM) keeps results in
+   * document order and lets a hit be navigated straight to a source line, exactly like Go to.
+   */
+  async search(query: string, options: SearchOptions = {}): Promise<DocumentSearch> {
+    if (this.disposed) return { hits: [], truncated: false };
+    const units: UnitText[] = [];
+    for (let line = 0; line < this.offsets.length; line++) {
+      const start = this.offsets[line];
+      const text = this.source.slice(start, this.offsets[line + 1] ?? this.source.length);
+      if (text.trim()) units.push({ text, number: line + 1, label: `Line ${line + 1}` });
+    }
+    const { hits, truncated } = searchUnits(units, query, options);
+    return { hits: hits.map(hit => ({ ...hit, start: this.offsets[hit.unit - 1] + hit.start, end: this.offsets[hit.unit - 1] + hit.end })), truncated };
+  }
+
+  /** Scrolls the block holding a match into view and marks the matched text. */
+  async revealSearchMatch(hit: SearchHit): Promise<void> {
+    if (this.disposed) return;
+    this.clearSearchHighlights();
+    const block = this.blocks.filter(candidate => candidate.line <= hit.unit).at(-1) ?? this.blocks[0];
+    if (!block) return;
+    const offset = this.renderedOffset(block, hit);
+    if (offset >= 0) this.mark(block.element, offset, hit.text.length);
+    block.element.scrollIntoView({ block: 'center' });
+    // Focus stays wherever it was: the find bar keeps the caret while stepping through
+    // results, and moving focus to the reader would swallow the next Enter.
+    this.publish();
+  }
+
+  /**
+   * Finds where a source match sits in a block's rendered text.
+   *
+   * Source and rendering disagree on offsets: Markdown drops or rewrites syntax, HTML entities
+   * change length, and whitespace is collapsed. Scaling the source offset proportionally gets
+   * close, but is off by a character whenever the block begins with trimmed space, which is why
+   * the last step is to find the matched text itself inside the rendered string. If the text is
+   * not there (the match was syntax, or spans inline elements), the scaled guess is used.
+   */
+  private renderedOffset(block: SourceBlock, hit: SearchHit): number {
+    const blockStart = this.offsets[block.line - 1] ?? 0;
+    const rendered = block.element.textContent ?? '';
+    const sourceSpan = (this.offsets[block.endLine - 1] ?? this.source.length) - blockStart;
+    const scaled = this.format === 'txt'
+      ? hit.start - blockStart
+      : Math.round((hit.start - blockStart) / Math.max(1, sourceSpan) * rendered.length);
+    // Plain text renders 1:1, so its offset is already exact.
+    if (this.format === 'txt') return Math.max(0, scaled);
+    // Prefer the literal match, searching near the scaled position first so a repeated word
+    // in the same block is not confused with this one.
+    const needle = hit.text;
+    if (!needle) return Math.max(0, scaled);
+    const near = rendered.indexOf(needle, Math.max(0, scaled - 2));
+    if (near >= 0) return near;
+    const anywhere = rendered.indexOf(needle);
+    return anywhere >= 0 ? anywhere : Math.max(0, scaled);
+  }
+
+  /**
+   * Wraps the matched range in a `<mark>` when it sits inside one text node. A match spanning
+   * elements is navigated but not marked, because splitting the DOM across nodes could move
+   * the reading anchor.
+   */
+  private mark(root: HTMLElement, offset: number, length: number): void {
+    const owner = root.ownerDocument;
+    const walker = owner.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    let remaining = offset;
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const size = node.textContent?.length ?? 0;
+      if (remaining > size) { remaining -= size; continue; }
+      if (size === 0) break;
+      const range = owner.createRange();
+      try {
+        range.setStart(node, Math.min(remaining, size));
+        range.setEnd(node, Math.min(size, remaining + length));
+      } catch { return; }
+      const mark = owner.createElement('mark');
+      mark.className = 'search-hit';
+      try { mark.append(range.extractContents()); } catch { return; }
+      range.insertNode(mark);
+      this.marks.push(mark);
+      return;
+    }
+  }
+
+  clearSearchHighlights(): void {
+    for (const mark of this.marks) {
+      const parent = mark.parentNode;
+      if (!parent) continue;
+      mark.replaceWith(...Array.from(mark.childNodes));
+      parent.normalize();
+    }
+    this.marks = [];
+  }
+
   destroy(): void {
     this.disposed = true;
     this.resize?.disconnect();
