@@ -13,7 +13,7 @@ const presets: [string, string][] = [['Acid', '#e13a3a'], ['Iris', '#a86af4'], [
 const tones: [PageTone, string][] = [['theme', 'Match theme'], ['white', 'White'], ['sepia', 'Sepia'], ['dim', 'Dim']];
 const restingHint = 'Hover a theme to try it on the whole window. Click to keep it.';
 
-/** Menu label for the kept appearance, e.g. "Lilac · System". */
+/** Menu label for the kept appearance, e.g. "Brief · System". */
 export function appearanceSummary() {
   const kept = appearance();
   return `${names[kept.palette]} · ${modes.find(([mode]) => mode === kept.mode)![1]}`;

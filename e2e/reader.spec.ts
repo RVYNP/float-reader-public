@@ -50,7 +50,7 @@ test('appearance previews on hover, keeps on click, restores on Escape and persi
   await sheet.getByRole('radio', { name: 'Arctic' }).hover();
   await expect(root).toHaveAttribute('data-palette', 'arctic');
   await page.keyboard.press('Escape');
-  await expect(root).toHaveAttribute('data-palette', 'lilac');
+  await expect(root).toHaveAttribute('data-palette', 'brief');
   await expect(sheet).toBeVisible();
   await sheet.getByRole('radio', { name: 'Birch' }).click();
   await sheet.getByRole('radio', { name: 'Light' }).click();
