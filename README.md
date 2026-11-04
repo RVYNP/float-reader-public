@@ -81,7 +81,7 @@ computer.
     </td>
     <td valign="top">
       <h3>Fits your space</h3>
-      Light and dark modes that follow your system, four calm theme families, your own accent
+      Light and dark modes that follow your system, five theme families (Brief by default), your own accent
       color, and a page tone for text. Hover a theme to preview it on the whole window.
     </td>
   </tr>
@@ -122,8 +122,8 @@ computer.
 </p>
 
 <p align="center">
-  <img src="docs/media/themes.png" alt="The same page in the Lilac, Birch, Graphite and Arctic themes, light and dark" width="880">
-  <br><sub><b>Four theme families</b>, each in light and dark</sub>
+  <img src="docs/media/themes.png" alt="The same page in the Brief, Lilac, Birch, Graphite and Arctic themes, light and dark" width="880">
+  <br><sub><b>Five theme families</b>, each in light and dark — Brief is the default</sub>
 </p>
 
 ## Private by design

@@ -29,7 +29,7 @@
 .library-resize-grip { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; width: 8px; height: 36px; border-radius: 4px; background: var(--accent); }
 .library-resize-grip span { width: 2px; height: 2px; border-radius: 50%; background: var(--on-accent); }
 /* Light: the design's dark ink pill. Dark: a raised card, so it doesn't flare against dark surfaces. */
-.library-resize-tip { position: absolute; top: 50%; left: calc(100% + 6px); display: flex; align-items: center; gap: 6px; padding: 5px 8px; border: 1px solid light-dark(var(--fg), var(--border)); border-radius: 6px; background: light-dark(var(--fg), var(--card)); color: light-dark(var(--chrome), var(--fg)); font: 10px/1.4 Consolas, monospace; white-space: nowrap; pointer-events: none; transform: translateY(-50%); }
+.library-resize-tip { position: absolute; top: 50%; left: calc(100% + 6px); display: flex; align-items: center; gap: 6px; padding: 5px 8px; border: 1px solid light-dark(var(--fg), var(--border)); border-radius: 6px; background: light-dark(var(--fg), var(--card)); color: light-dark(var(--chrome), var(--fg)); font: 10px/1.4 var(--font-mono); white-space: nowrap; pointer-events: none; transform: translateY(-50%); }
 .library-right .library-resize-tip { left: auto; right: calc(100% + 6px); }
 .library-resize-value { color: light-dark(var(--faint), var(--muted)); font-variant-numeric: tabular-nums; }
 .library-resize::before, .library-resize-grip, .library-resize-tip { opacity: 0; transition: opacity .12s; }
@@ -69,7 +69,7 @@
 .library-document.is-active { background: var(--accent-soft); border-color: var(--accent-border); }
 .library-document-open { flex: 1; display: flex; flex-direction: column; gap: 5px; min-width: 0; text-align: left; padding: 7px 3px; }
 .library-document-name { display: block; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
-.library-document-meta { color: var(--muted); font: 9px/1.4 Consolas, monospace; letter-spacing: .3px; }
+.library-document-meta { color: var(--muted); font: 9px/1.4 var(--font-mono); letter-spacing: .3px; }
 .library-document.is-active .library-document-meta { color: var(--accent-ink); }
 .library-favorite, .library-organize { flex-shrink: 0; padding: 4px 3px; width: 25px; height: 30px; font-size: 17px !important; line-height: 1; color: var(--muted); }
 .library-favorite[aria-pressed=true] { color: var(--accent); background: transparent; border-color: transparent; }

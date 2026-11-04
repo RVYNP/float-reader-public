@@ -22,10 +22,10 @@ contents, Go to, Back and a shortcut reference.
 Open the menu and choose **Appearance…** to open the Appearance panel at the bottom of the window.
 
 - **Mode:** System (default; follows the operating system as it changes), Light or Dark.
-- **Theme:** Lilac (default), Birch, Graphite or Arctic. Each has a light and a dark version.
+- **Theme:** Brief (default), Lilac, Birch, Graphite or Arctic. Each has a light and a dark version.
   Hover over or focus a theme to preview it on the whole window, click or press Enter to keep it, and
   move away or press Escape to go back to the theme you kept.
-- **Accent:** the theme's own accent, one of six presets, or a custom color. Contrast is adjusted
+- **Accent:** the theme's own accent, one of seven presets, or a custom color. Contrast is adjusted
   automatically so text and controls stay readable.
 - **Page:** Match theme, White, Sepia or Dim for text documents (Markdown, TXT and reflowable EPUB).
   PDF pages, fixed-layout EPUB pages and images always keep their original colors.
