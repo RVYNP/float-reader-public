@@ -41,6 +41,7 @@ const GROUP_ORDER: readonly CommandGroup[] = ['File', 'Navigate', 'View', 'Windo
 export const COMMANDS: readonly Command[] = [
   { id: 'open', label: 'Open file…', group: 'File', keywords: ['load', 'recent'], shortcut: 'Ctrl O' },
   { id: 'library', label: 'Toggle document library', group: 'File', keywords: ['sidebar', 'books', 'collection'], shortcut: 'Ctrl B' },
+  { id: 'find', label: 'Find in document…', group: 'Navigate', keywords: ['search', 'text', 'grep', 'locate'], shortcut: 'Ctrl F', requiresDocument: true },
   { id: 'goto', label: 'Go to location…', group: 'Navigate', keywords: ['jump', 'page', 'line', 'percentage'], shortcut: 'Ctrl G', requiresDocument: true },
   { id: 'outline', label: 'Contents', group: 'Navigate', keywords: ['toc', 'chapters', 'outline'], requiresDocument: true },
   { id: 'back', label: 'Back after jump', group: 'Navigate', keywords: ['history', 'return', 'previous location'], shortcut: 'Alt ←', requiresDocument: true },
@@ -89,6 +90,7 @@ export const SHORTCUTS: readonly Shortcut[] = [
   { id: 'lock', key: 'l', ctrl: true, shift: true },
   { id: 'open', key: 'o', ctrl: true },
   { id: 'goto', key: 'g', ctrl: true },
+  { id: 'find', key: 'f', ctrl: true },
   { id: 'fit-page', key: '0', ctrl: true },
   { id: 'fit-width', key: '2', ctrl: true },
   { id: 'spread', key: '3', ctrl: true },

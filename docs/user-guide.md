@@ -79,6 +79,18 @@ pixels (or, for reflowable EPUB, taller than wide), pages show one at a time; th
 the subtitle explain that two-page view is waiting for more width, and it returns as soon as the
 panel is wide enough.
 
+### Find in document
+
+**Ctrl+F** searches the open document's text. Matches are counted as you type ("3 of 12"), Enter
+goes to the next match and Shift+Enter to the previous one, wrapping at either end; the current
+match is highlighted in the page and the reader scrolls to it. **Aa** matches case exactly and
+**ab** matches whole words only. Escape closes the bar and clears the highlight.
+
+Search runs over each format's real text: the PDF text layer, EPUB chapter text, and Markdown or
+plain-text source. A scanned PDF that has no text layer says so rather than reporting no matches,
+and images have nothing to search. Markdown searches its source, so markup such as a URL or table
+pipe is findable too.
+
 ### Command palette
 
 **Ctrl+K** opens a search field over every reader action, so you can run something without finding it
@@ -95,6 +107,7 @@ library.
 
 | Action | Shortcut |
 | --- | --- |
+| Find in document | Ctrl+F |
 | Search commands (command palette) | Ctrl+K |
 | Next / previous page | PgDn / PgUp (Right / Left in page mode) |
 | Next / previous screen | Space / Shift+Space |

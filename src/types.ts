@@ -1,3 +1,5 @@
+import type { DocumentSearch, SearchHit, SearchOptions } from './search';
+
 export type ImageFormat = 'png' | 'jpg' | 'jpeg' | 'webp' | 'gif' | 'avif' | 'bmp';
 export type Format = 'pdf' | 'epub' | 'md' | 'txt' | ImageFormat;
 export type Locator = { kind: Format; [key: string]: unknown };
@@ -32,6 +34,22 @@ export interface ReaderAdapter {
   restore(locator: Locator): Promise<void>;
   setOptions(options: ReaderOptions): Promise<void>;
   outline(): OutlineItem[];
+  /**
+   * Finds `query` in the document's text. Absent when the format cannot expose text at all,
+   * such as images, where the find bar explains instead of searching.
+   *
+   * Adapters extract their own plain text (PDF text layer, EPUB document text, the source
+   * string for Markdown/TXT) and report matches in their own units: pages, sections or
+   * source lines. The find bar only shows results and asks `revealSearchMatch` to navigate.
+   */
+  search?(query: string, options?: SearchOptions): Promise<DocumentSearch>;
+  /**
+   * Shows one match from the most recent `search`: navigates so it is visible and marks it so
+   * the reader can see which of several matches on a page they are on.
+   */
+  revealSearchMatch?(hit: SearchHit): Promise<void>;
+  /** Clears the current match marking without changing position. */
+  clearSearchHighlights?(): void;
   /** The element that scrolls page-based content, for the view controls and hand tool; absent when content reflows instead of zooming. */
   scroller?(): HTMLElement | undefined;
   destroy(): void;
