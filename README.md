@@ -5,6 +5,10 @@
   </picture>
 </p>
 
+<p align="center">
+  <img src="docs/media/wordmark.png" alt="Hold My Brief wordmark" width="880">
+</p>
+
 <h1 align="center">Hold My Brief</h1>
 
 <p align="center">
@@ -13,10 +17,10 @@
 </p>
 
 <p align="center">
-  <img alt="Windows and macOS" src="https://img.shields.io/badge/Windows%20%C2%B7%20macOS-desktop-6358d8?style=flat-square">
-  <img alt="Light and dark themes" src="https://img.shields.io/badge/themes-light%20%C2%B7%20dark-6358d8?style=flat-square">
-  <img alt="No accounts, no tracking" src="https://img.shields.io/badge/private-no%20accounts%20%C2%B7%20no%20tracking-6358d8?style=flat-square">
-  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-6358d8?style=flat-square"></a>
+  <img alt="Windows and macOS" src="https://img.shields.io/badge/Windows%20%C2%B7%20macOS-desktop-1A1815?style=flat-square">
+  <img alt="Light and dark themes" src="https://img.shields.io/badge/themes-light%20%C2%B7%20dark-1A1815?style=flat-square">
+  <img alt="No accounts, no tracking" src="https://img.shields.io/badge/private-no%20accounts%20%C2%B7%20no%20tracking-1A1815?style=flat-square">
+  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-FA4848?style=flat-square"></a>
 </p>
 
 <p align="center">
