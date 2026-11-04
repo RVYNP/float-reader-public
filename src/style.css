@@ -185,15 +185,18 @@ select:hover { border-color: var(--accent-border); }
 .toolbar { display: flex; align-items: center; gap: 4px; padding: 7px 8px; background: var(--chrome); flex-shrink: 0; }
 .title { min-width: 0; flex: 1; padding: 0 5px; }
 .title strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; font-size: 12px; }
-.title span { display: block; font: 10px/1.4 var(--font-mono); color: var(--muted); margin-top: 2px; }
+.title span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 10px/1.4 var(--font-mono); color: var(--muted); margin-top: 2px; }
 .toolbar button { font-size: 12px; padding: 6px 7px; }
 .toolbar #open { border-color: var(--border); background: var(--surface); }
 .toolbar #open:hover { border-color: var(--accent-border); background: var(--accent-soft); }
 #menu-toggle { font-size: 18px; line-height: 1; }
 #library-toggle { display: grid; place-items: center; }
 #library-toggle[aria-expanded=true] { background: var(--accent-soft); border-color: var(--accent-border); color: var(--accent-ink); }
-#reader-layout { position: relative; display: flex; flex: 1; min-height: 0; min-width: 0; }
-#workspace { position: relative; flex: 1; min-height: 0; min-width: 0; margin: 0 6px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); overflow: hidden; }
+/* --find-bar-height is the find bar's real height, so the reading surface and the opening strip can
+   move below it without guessing at font metrics (Windows renders the bar a pixel taller than macOS).
+   --workspace-border is the reading panel's edge, which the strip is positioned outside of. */
+#reader-layout { --find-bar-height: 39px; --workspace-border: 1px; position: relative; display: flex; flex: 1; min-height: 0; min-width: 0; }
+#workspace { position: relative; flex: 1; min-height: 0; min-width: 0; margin: 0 6px; border: var(--workspace-border) solid var(--border); border-radius: 9px; background: var(--surface); overflow: hidden; }
 #empty { height: 100%; overflow: auto; padding: 36px 28px 24px; max-width: 640px; margin: auto; }
 .book-mark { display: grid; place-items: center; width: 42px; height: 42px; background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent-border); border-radius: 10px; }
 .eyebrow { font: 10px/1.5 var(--font-mono) !important; letter-spacing: 1.5px; color: var(--muted) !important; margin-top: 26px !important; }
@@ -216,9 +219,26 @@ footer { position: relative; display: flex; gap: 4px; align-items: center; paddi
 #progress::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(to right, var(--accent) var(--scrub-fill), var(--track) var(--scrub-fill)); }
 #progress::-webkit-slider-thumb { appearance: none; width: 14px; height: 14px; margin-top: -5px; border-radius: 50%; border: 2px solid var(--surface); background: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
 #progress:disabled { opacity: .4; cursor: default; }
-#notice, #loading { display: flex; align-items: center; gap: 8px; padding: 8px 12px; margin: 0 6px 6px; background: var(--notice); color: var(--notice-ink); font-size: 12px; border: 1px solid var(--notice-border); border-radius: 6px; flex-shrink: 0; }
+#notice { display: flex; align-items: center; gap: 8px; padding: 8px 12px; margin: 0 6px 6px; background: var(--notice); color: var(--notice-ink); font-size: 12px; border: 1px solid var(--notice-border); border-radius: 6px; flex-shrink: 0; }
+/* The opening strip is chrome, not layout: in flow it took 47 px of height from the reading area, so
+   the PDF adapter fitted the page to the shorter box, revealed it at the wrong size and rasterised it
+   again once the strip went away. It floats over the top of the reading panel instead, the way the
+   adapter's own render status already does. It sits beside #workspace rather than inside it: the
+   workspace goes inert behind the compact library sheet, which would make its Cancel button dead.
+   A notice keeps its own row: it is persistent, and floating it would cover the document, the find
+   bar and the library header until it is dismissed. */
+#loading { position: absolute; z-index: 25; top: 0; left: 6px; right: 6px; display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--accent-soft); color: var(--accent-ink); font-size: 12px; border-bottom: 1px solid var(--accent-border); box-shadow: var(--shadow-popover); }
+/* The find bar owns the top edge of the panel, so the strip waits below it. The bar sits inside the
+   panel's 1 px border, while the strip is positioned against the layout, so that border is added back;
+   the reader host, which is positioned inside the panel, only needs the bar's own height. */
+#reader-layout:has(#find-bar:not([hidden])) #loading { top: calc(var(--find-bar-height) + var(--workspace-border)); }
+/* Beside the library the reading panel starts after the panel, a 10 px handle and a 6 px margin, so the
+   strip spans the panel rather than the whole layout (the width is published by applyWidth in library.ts). */
+@media (min-width: 720px) {
+  #reader-layout.library-open:not(.library-right) #loading { left: calc(var(--library-width, 270px) + 16px); }
+  #reader-layout.library-open.library-right #loading { right: calc(var(--library-width, 270px) + 16px); }
+}
 #notice span, #loading span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-#loading { background: var(--accent-soft); color: var(--accent-ink); border-color: var(--accent-border); }
 #notice button, #loading button { padding: 4px 7px; border-color: currentColor; font-size: 11px; }
 [hidden] { display: none !important; }
 .reader-host { position: absolute; inset: 0; overflow: auto; background: var(--surface); scrollbar-color: var(--faint) transparent; scrollbar-width: thin; }
@@ -356,10 +376,10 @@ dd { margin: 0; color: var(--muted); }
    overlay, so it never covers the text it is searching. */
 /* The reading surface is absolutely positioned over the whole panel, so the find bar floats
    above it on the stacking axis rather than sharing its layout flow. */
-#find-bar { position: absolute; top: 0; left: 0; right: 0; z-index: 5; display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-bottom: 1px solid var(--border); background: var(--card); color: var(--muted); box-shadow: var(--shadow-popover); }
+#find-bar { position: absolute; top: 0; left: 0; right: 0; z-index: 5; height: var(--find-bar-height); display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-bottom: 1px solid var(--border); background: var(--card); color: var(--muted); box-shadow: var(--shadow-popover); }
 #find-bar[hidden] { display: none; }
 /* While the bar is open, shift the reading surface down so the first line is never hidden. */
-#workspace:has(#find-bar:not([hidden])) .reader-host { top: 39px; }
+#workspace:has(#find-bar:not([hidden])) .reader-host { top: var(--find-bar-height); }
 #find-bar svg { flex-shrink: 0; }
 #find-query { flex: 1; min-width: 0; padding: 4px 7px; border: 1px solid var(--border); border-radius: 5px; background: var(--card); color: var(--fg); font: inherit; font-size: 12px; }
 #find-query:focus { outline: 2px solid var(--accent); outline-offset: 1px; }

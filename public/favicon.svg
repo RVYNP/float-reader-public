@@ -1,0 +1,7 @@
+<!-- The app icon as text, so the repository keeps its no-binary-image-assets rule: the brief-blue
+     squircle with Hmb. in Inter Bold and the acid period, matching the platform icons.
+     The browser asks for a favicon on load; without this the dev server answers 404. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <rect width="1024" height="1024" rx="228" fill="#7ADBFE"/>
+  <text x="512" y="640" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-weight="700" font-size="380" letter-spacing="-18" fill="#1A1815">Hmb<tspan fill="#FA4848">.</tspan></text>
+</svg>

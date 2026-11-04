@@ -123,8 +123,8 @@ export function createLibrary(root: HTMLElement, callbacks: Callbacks): { refres
   function applyWidth(next: number) {
     const bounds = libraryWidthBounds(viewport()); width = clampLibraryWidth(next, viewport());
     // Set on the root (it declares its own --library-width, which would shadow an inherited one)
-    // and on the layout (the workspace reads it to keep the floating view controls clear of a
-    // right-docked drawer).
+    // and on the layout: the workspace reads it to keep the floating view controls clear of a
+    // right-docked drawer, and the opening strip spans the reading panel beside the library.
     root.style.setProperty('--library-width', `${width}px`);
     layout?.style.setProperty('--library-width', `${width}px`);
     tipValue.textContent = `${width} px`;

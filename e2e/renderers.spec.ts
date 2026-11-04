@@ -121,6 +121,100 @@ test('PDF loading does not change scroll geometry or repeatedly refit an idle pa
   }
 });
 
+test('the opening strip is chrome: it never takes height from the reading area or covers the find bar', async ({ page }) => {
+  await page.setViewportSize({ width: 420, height: 620 });
+  await page.goto('/');
+  await page.locator('#file-input').setInputFiles({ name: 'strip.pdf', mimeType: 'application/pdf', buffer: pdfFixture() });
+  await expect(page.locator('#position')).toContainText('Page 1 of 3');
+  const layout = () => page.evaluate(() => document.getElementById('reader-layout')!.clientHeight);
+  const strip = (hidden: boolean) => page.evaluate(hidden => { document.getElementById('loading')!.hidden = hidden; }, hidden);
+  // Showing the strip on a settled document must not move the reading area. In flow it took 47 px of
+  // height, which is what made the adapter fit the page to the wrong box while a document opened.
+  const settled = await layout();
+  await strip(false);
+  expect(await layout()).toBe(settled);
+  await strip(true);
+  expect(await layout()).toBe(settled);
+  // The find bar owns the same top edge of the reading panel, so the strip has to sit below it.
+  await page.keyboard.press('Control+f');
+  await expect(page.locator('#find-bar')).toBeVisible();
+  await strip(false);
+  const covered = await page.evaluate(() => {
+    const bar = document.getElementById('find-bar')!.getBoundingClientRect();
+    const box = document.getElementById('loading')!.getBoundingClientRect();
+    const field = document.getElementById('find-query')!;
+    const fieldBox = field.getBoundingClientRect();
+    const hit = document.elementFromPoint(fieldBox.x + fieldBox.width / 2, fieldBox.y + fieldBox.height / 2);
+    return { overlap: Math.max(0, Math.min(bar.bottom, box.bottom) - Math.max(bar.top, box.top)), reachable: hit === field || (!!hit && field.contains(hit)) };
+  });
+  expect(covered.overlap).toBe(0);
+  expect(covered.reachable).toBe(true);
+  await strip(true);
+  // In a compact window the library covers the reading panel with a scrim and makes it inert, so the
+  // strip has to live outside that panel: Cancel is the only way to stop a slow open.
+  await page.locator('#library-toggle').click();
+  await expect(page.locator('#library-root')).toBeVisible();
+  await strip(false);
+  const cancel = await page.evaluate(() => {
+    const button = document.getElementById('cancel')!;
+    const box = button.getBoundingClientRect();
+    const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+    return { inert: !!button.closest('[inert]'), reachable: hit === button || (!!hit && button.contains(hit)) };
+  });
+  expect(cancel.inert, 'the strip must not sit inside the inert reading panel').toBe(false);
+  expect(cancel.reachable, 'Cancel must be clickable over the compact library sheet').toBe(true);
+  await strip(true);
+});
+
+test('opening a document reveals the page at its settled size and rasterises it once', async ({ page }) => {
+  // A page fitted while the opening strip was in flow was revealed at the wrong size and rendered
+  // again a moment later. The 300x400 case also covers the toolbar: if its subtitle wraps while a
+  // document loads, the reading area changes height and the page is refitted for an unrelated reason.
+  for (const viewport of [{ width: 420, height: 620 }, { width: 300, height: 400 }]) {
+    await page.setViewportSize(viewport);
+    await page.goto('/');
+    // Each window size opens the document for the first time: a saved position would restore and
+    // render again, which is a different behaviour from the one under test.
+    await page.evaluate(() => localStorage.clear());
+    await page.goto('/');
+    // Record what the reading area really was while the strip was up, what the page looked like at
+    // the instant it was revealed, and how many times it rendered.
+    await page.evaluate(() => {
+      type Snapshot = { layout: number; bitmap: number[] };
+      const probe: { appends: number; whileLoading: number; revealed: Snapshot; settled: Snapshot } =
+        { appends: 0, whileLoading: 0, revealed: { layout: 0, bitmap: [] }, settled: { layout: 0, bitmap: [] } };
+      (window as unknown as { __fitProbe: typeof probe }).__fitProbe = probe;
+      const layout = () => document.getElementById('reader-layout')!.clientHeight;
+      const bitmap = () => { const canvas = document.querySelector<HTMLCanvasElement>('.pdf-page canvas'); return canvas ? [canvas.width, canvas.height] : []; };
+      new MutationObserver(records => {
+        for (const record of records) {
+          for (const node of record.addedNodes) if (node instanceof HTMLElement && node.classList.contains('pdf-page')) probe.appends++;
+          const target = record.target;
+          if (!(target instanceof HTMLElement) || target.id !== 'loading') continue;
+          if (!target.hidden) probe.whileLoading = layout();
+          else {
+            probe.revealed = { layout: layout(), bitmap: bitmap() };
+            setTimeout(() => { probe.settled = { layout: layout(), bitmap: bitmap() }; }, 450);
+          }
+        }
+      }).observe(document.getElementById('app')!, { attributes: true, attributeFilter: ['hidden'], subtree: true, childList: true });
+    });
+    await page.locator('#file-input').setInputFiles({ name: 'opening-fit.pdf', mimeType: 'application/pdf', buffer: pdfFixture() });
+    await expect(page.locator('#position')).toContainText('Page 1 of 3');
+    await expect(page.locator('.pdf-render-status')).toHaveCount(0);
+    type Probe = { appends: number; whileLoading: number; revealed: { layout: number; bitmap: number[] }; settled: { layout: number; bitmap: number[] } };
+    const read = () => page.evaluate(() => (window as unknown as { __fitProbe: Probe }).__fitProbe);
+    await expect.poll(async () => (await read()).settled.bitmap.length).toBe(2);
+    const { appends, whileLoading, revealed, settled } = await read();
+    const where = `${viewport.width}x${viewport.height}`;
+    expect(whileLoading, `${where}: the strip really was up while the document loaded`).toBeGreaterThan(0);
+    expect(revealed.layout, `${where}: the strip took height from the reading area`).toBe(whileLoading);
+    expect(revealed.layout, `${where}: the reading area moved under the strip`).toBe(settled.layout);
+    expect(revealed.bitmap, `${where}: the page was revealed at a size it then left`).toEqual(settled.bitmap);
+    expect(appends, `${where}: the page was rasterised more than once`).toBe(1);
+  }
+});
+
 test('library drawer floats over the page and never resizes it, while drag, keyboard, double-click, right dock and persistence still work', async ({ page }) => {
   await page.setViewportSize({ width: 1080, height: 680 });
   await page.goto('/');
