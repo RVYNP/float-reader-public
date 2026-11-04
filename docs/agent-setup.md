@@ -100,7 +100,9 @@ Download the matching file and `SHA256SUMS.txt` into a temporary folder, then co
    hdiutil detach /tmp/hold-my-brief
    ```
 
-2. The app is not notarized. If macOS refuses to open it, the user can approve it once:
+2. The app is not notarized, so macOS says *"Apple could not verify 'Hold My Brief' is free of
+   malware…"* on first open. Tell the user this is Gatekeeper's standard message for apps outside
+   Apple's paid notarization service, not a detection. They can approve it once:
    - macOS 15 or later: **System Settings › Privacy & Security**, scroll down, **Open Anyway**.
    - macOS 14 or earlier: Control-click the app, choose **Open**, then **Open** again.
 

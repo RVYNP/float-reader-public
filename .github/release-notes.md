@@ -14,14 +14,15 @@ There is no build for Intel Macs yet.
 
 ## Opening it the first time
 
-These builds are not code-signed yet, so your computer will ask you to confirm once.
+These builds aren't signed with a paid Apple or Microsoft developer certificate yet, so your computer will ask you to confirm once.
 
 **Windows.** Windows may show a blue "Windows protected your PC" screen because the app isn't signed yet. Choose **More info**, then **Run anyway**. The installer sets Hold My Brief up for your account only and doesn't need admin rights. It uses Microsoft Edge WebView2, which Windows 10 and 11 already include; if it's missing, the installer downloads it. The portable zip needs WebView2 already installed.
 
-**Mac.** Open the `.dmg` and drag Hold My Brief to Applications. The first time you open it, macOS says it can't verify the developer.
+**Mac.** Open the `.dmg` and drag Hold My Brief to Applications. The first time you open it, macOS says *"Apple could not verify 'Hold My Brief' is free of malware that may harm your Mac or compromise your privacy."* That's the standard message for any app that hasn't been through Apple's paid notarization service. It doesn't mean anything was found.
 
-- On macOS 15 (Sequoia) or later: click **Done**, open **System Settings > Privacy & Security**, scroll down and click **Open Anyway**.
+- On macOS 15 (Sequoia) or later: click **Done**, open **System Settings > Privacy & Security**, scroll down, click **Open Anyway**, then confirm with your password or Touch ID.
 - On macOS 14 or earlier: Control-click (right-click) the app, choose **Open**, then **Open** again.
+- Prefer Terminal? Check the download against `SHA256SUMS.txt` (below) first, then run `xattr -dr com.apple.quarantine "/Applications/Hold My Brief.app"` once.
 
 After that it opens normally.
 
