@@ -18,13 +18,13 @@ this build, so run the PDF through an OCR tool first if you need its text. This 
 ## The window
 
 **Pin** keeps the reader above ordinary windows. **Lock** captures its outer dimensions while
-allowing movement. Ctrl+Shift+T toggles pin; Ctrl+Shift+L toggles lock. The menu includes both
-controls, window presets (Compact 420 × 620, Reading 760 × 900), typography, fit/zoom, rotation,
-contents, Go to, Back and a shortcut reference.
+allowing movement. Ctrl+Shift+T toggles pin; Ctrl+Shift+L toggles lock. Everything else (window presets
+(Compact 420 × 620, Reading 760 × 900), typography, fit/zoom, rotation, contents, Go to, Back and a
+shortcut reference) is in the command palette, which the **···** button and Ctrl+K both open.
 
 ## Appearance
 
-Open the menu and choose **Appearance…** to open the Appearance panel at the bottom of the window.
+Open the command palette (**···** or Ctrl+K) and choose **Appearance and theme…** to open the Appearance panel at the bottom of the window.
 
 - **Mode:** System (default; follows the operating system as it changes), Light or Dark.
 - **Theme:** Brief (default), Lilac, Birch, Graphite or Arctic. Each has a light and a dark version.
@@ -74,9 +74,9 @@ so they have no pill and no panning.
 
 ### Two-page spread
 
-**Two-page spread** (Reader controls menu, the pill's book button, or Ctrl+3) shows PDF and
+**Two-page spread** (the pill's book button, the command palette, or Ctrl+3) shows PDF and
 fixed-layout EPUB pages side by side, edge to edge, like an open book. By default page 1 is a cover
-shown alone on the right and pairs follow as 2–3, 4–5…; turn off **Cover page alone** in the menu for
+shown alone on the right and pairs follow as 2–3, 4–5…; turn off **Cover page alone** in the command palette for
 documents that should pair 1–2. Fixed-layout EPUBs keep their publisher's page sides and
 right-to-left page progression. Pages of different sizes are scaled to a common height; fit page fits
 the whole spread and fit width its width. Page turns, Go to, Back and the scrubber move by spread, and
@@ -102,8 +102,8 @@ pipe is findable too.
 
 ### Command palette
 
-**Ctrl+K** opens a search field over every reader action, so you can run something without finding it
-in the menu. Start typing to filter: matching is forgiving, so `zoom` finds the four zoom commands
+**Ctrl+K**, or the **···** button at the right of the toolbar, opens a search field over every reader
+action. It is the reader's only menu. Start typing to filter: matching is forgiving, so `zoom` finds the four zoom commands
 through their other names and `fit pa` finds **Fit page**. Arrow keys move the highlight, Enter runs
 the highlighted command and Escape closes the palette.
 
@@ -153,7 +153,7 @@ menu separately clears recents and saved reading data; neither deletes documents
 Use the sidebar button at the left of the toolbar, or **Ctrl+B**, to open the library. It opens as a
 drawer that floats over the reading panel at every width, so opening, closing, resizing or moving it
 never changes the page's size, zoom or place. Escape closes the drawer while focus is inside it. Wide
-and compact visibility preferences are remembered separately.
+and compact visibility preferences are remembered separately; until you open it, the library starts closed.
 
 Drag the divider between the drawer and the page to resize the drawer (240–520 pixels, and never more
 than 55% of the window, which keeps at least 320 pixels of the reading panel clear beside it). Because

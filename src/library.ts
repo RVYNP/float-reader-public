@@ -62,14 +62,15 @@ function orderedTree<T extends { id: string; name: string; parentId: string | nu
 }
 
 export function createLibrary(root: HTMLElement, callbacks: Callbacks): { refresh: (activePath?: string) => Promise<void>; toggle: () => void } {
-  // Drawer mode: at >=720 px the library is a resizable drawer floating over the page; below it
+  // Closed until asked for at every width (the reader opens to the page). Drawer mode: at >=720 px
+  // the library is a resizable drawer floating over the page; below it
   // becomes a compact sheet with a scrim, a focus trap and workspace `inert`.
   const wide = window.matchMedia('(min-width: 720px)');
   const layout = document.getElementById('reader-layout');
   const toggleButton = document.getElementById('library-toggle');
   const workspace = document.getElementById('workspace');
   const preferenceKey = () => `hold-my-brief:library-${wide.matches ? 'wide' : 'narrow'}`;
-  function preference() { try { const saved = localStorage.getItem(preferenceKey()); return saved === null ? wide.matches : saved === 'open'; } catch { return wide.matches; } }
+  function preference() { try { const saved = localStorage.getItem(preferenceKey()); return saved === 'open'; } catch { return false; } }
   let visible = preference(); let library: Library = emptyLibrary(); let filter: Filter = { kind: 'all' };
   let activePath: string | undefined; let busy = false, loaded = false, revision = 0, page = 0;
   let loadError = false; let modal: HTMLDialogElement | undefined; let modalError: HTMLElement | undefined;

@@ -5,38 +5,28 @@ import { createLibrary } from './library';
 import { ImageAdapter } from './adapters/image';
 import { createPalette } from './palette';
 import { createFindBar } from './find-bar';
-import { COMMANDS, shortcutFor, unavailableReason } from './commands';
+import { COMMANDS, shortcutReference, shortcutFor, unavailableReason } from './commands';
 import { initAppearance } from './theme';
-import { appearanceSummary, createAppearanceSheet, paletteIcon } from './appearance';
+import { createAppearanceSheet } from './appearance';
 import { Panner } from './pan';
 import { MIN_SPREAD_WIDTH, pagesLabel, spreadPages } from './spread';
 
 initAppearance();
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
-  <header class="toolbar"><button id="library-toggle" aria-label="Document library" aria-controls="library-root" aria-expanded="false" title="Document library (Ctrl+B)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16m-3-12v8"/></svg></button><button id="open" title="Open file (Ctrl+O)">Open</button><div class="title"><strong id="filename">Hold My Brief</strong><span id="filekind">A reader that holds.</span></div><button id="pin" aria-pressed="false" title="Always on top (Ctrl+Shift+T)">Pin</button><button id="lock" aria-pressed="false" title="Lock dimensions (Ctrl+Shift+L)">Lock</button><button id="menu-toggle" aria-label="Reader menu" aria-expanded="false">···</button></header>
+  <header class="toolbar"><button id="library-toggle" aria-label="Document library" aria-controls="library-root" aria-expanded="false" title="Document library (Ctrl+B)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16m-3-12v8"/></svg></button><button id="open" title="Open file (Ctrl+O)">Open</button><div class="title"><strong id="filename">Hold My Brief</strong><span id="filekind"></span></div><button id="pin" aria-pressed="false" title="Always on top (Ctrl+Shift+T)">Pin</button><button id="lock" aria-pressed="false" title="Lock dimensions (Ctrl+Shift+L)">Lock</button><button id="menu-toggle" aria-label="Commands" aria-haspopup="dialog" aria-expanded="false" title="Commands (Ctrl+K)">···</button></header>
   <aside id="notice" role="status" hidden><span></span><button id="retry-save" hidden>Retry save</button><button id="dismiss-notice" aria-label="Dismiss message">×</button></aside>
   <div id="reader-layout"><div id="loading" role="status" hidden><span></span><button id="cancel">Cancel</button></div><div id="library-root"></div>
-  <main id="workspace"><section id="empty"><div class="book-mark" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M9 3v18m4-13h3m-3 4h3"/></svg></div><p class="eyebrow">KEEP YOUR PLACE</p><h1>Hand it over.</h1><p>Drop a brief and it stays pinned<br>exactly where you leave it.</p><button id="empty-open" class="primary">Hold a brief <span>↗</span></button><p class="formats">PDF · EPUB · MARKDOWN · TEXT</p><div id="recents"></div><p id="preview-note" hidden>Browser preview · Pin and size lock are available in the desktop app.</p></section>
+  <main id="workspace"><section id="empty"><h1 class="visually-hidden">Hold My Brief</h1><button id="empty-open" class="primary">Open… <kbd>Ctrl O</kbd></button><p class="formats">PDF · EPUB · Markdown · Text · Images</p><div id="recents"></div><p class="empty-hint"><kbd>Ctrl K</kbd> for every command</p><p id="preview-note" hidden>Browser preview · Pin and size lock are available in the desktop app.</p></section>
   <div id="view-controls" role="group" aria-label="View controls" hidden><button id="zoom-out" aria-label="Zoom out" title="Zoom out (Ctrl −)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg></button><button id="zoom-level">Fit</button><button id="zoom-in" aria-label="Zoom in" title="Zoom in (Ctrl +)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M12 5v14"/></svg></button><span class="view-sep" aria-hidden="true"></span><button id="hand-tool" aria-label="Hand tool" aria-pressed="false" aria-disabled="true" title="Zoom in to pan"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 11V6a2 2 0 0 0-4 0M14 10V4a2 2 0 0 0-4 0v2M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg></button><span id="view-layout" class="view-group" role="group" aria-label="Page layout" hidden><span class="view-sep" aria-hidden="true"></span><button id="view-single" aria-label="Single page" aria-pressed="true" title="Single page"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg></button><button id="view-spread" aria-label="Two pages" aria-pressed="false" title="Two-page spread (Ctrl 3)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg></button></span></div></main>
   </div>
-  <footer><button id="previous" aria-label="Previous page" title="Previous page (PgUp)" disabled>←</button><button id="position" title="Go to location (Ctrl+G)" disabled>Ready when you are</button><button id="next" aria-label="Next page" title="Next page (PgDn)" disabled>→</button><input id="progress" type="range" aria-label="Document position" title="Click or drag to jump through the document" min="0" max="100" step="1" value="0" disabled></footer>
-  <dialog id="menu"><div class="dialog-head"><h2>Reader controls</h2><button data-close aria-label="Close menu">×</button></div><div class="menu-grid">
-    <button data-action="goto">Go to… <kbd>Ctrl G</kbd></button><button data-action="outline">Contents</button><button data-action="back">Back after jump <kbd>Alt ←</kbd></button>
-    <button data-action="pin">Toggle pin <kbd>Ctrl Shift T</kbd></button><button data-action="lock">Toggle size lock <kbd>Ctrl Shift L</kbd></button>
-    <button data-action="compact">Compact window</button><button data-action="reading">Reading window</button>
-    <button data-action="fit-page">Fit page <kbd>Ctrl 0</kbd></button><button data-action="fit-width">Fit width <kbd>Ctrl 2</kbd></button><button data-action="rotate">Rotate page 90°</button>
-    <button id="spread-toggle" data-action="spread" aria-pressed="false" disabled>Two-page spread <kbd>Ctrl 3</kbd></button><button id="cover-toggle" data-action="cover" aria-pressed="true" disabled>Cover page alone</button>
-    <button data-action="smaller">Smaller text / zoom <kbd>Ctrl −</kbd></button><button data-action="larger">Larger text / zoom <kbd>Ctrl +</kbd></button><button data-action="appearance"><span class="menu-label">${paletteIcon}Appearance…</span><span class="menu-value" id="appearance-summary"></span></button><button data-action="type">Typography & wrapping</button>
-    <button data-action="start">First location</button><button data-action="end">Last location</button><button data-action="screen-previous">Previous screen</button><button data-action="screen-next">Next screen</button>
-    <button data-action="shortcuts">Keyboard shortcuts</button><button data-action="clear-recents">Clear recent files</button><button data-action="clear-data">Delete saved reading data…</button>
-  </div></dialog>
+  <footer><button id="previous" aria-label="Previous page" title="Previous page (PgUp)" disabled>←</button><button id="position" title="Go to location (Ctrl+G)" disabled>No document</button><button id="next" aria-label="Next page" title="Next page (PgDn)" disabled>→</button><input id="progress" type="range" aria-label="Document position" title="Click or drag to jump through the document" min="0" max="100" step="1" value="0" disabled></footer>
   <dialog id="jump"><form><div class="dialog-head"><h2>Go to location</h2><button type="button" data-close aria-label="Close">×</button></div><label id="jump-label" for="target">Location</label><input id="target" required autocomplete="off"><p id="jump-error" role="alert"></p><button class="primary" type="submit">Go to location</button></form></dialog>
   <dialog id="password"><form><h2>Password required</h2><label for="secret">Document password</label><input id="secret" type="password" autocomplete="off"><div class="dialog-actions"><button type="button" data-close>Cancel</button><button type="submit" class="primary">Open document</button></div></form></dialog>
   <dialog id="contents"><div class="dialog-head"><h2>Contents</h2><button data-close aria-label="Close contents">×</button></div><div id="outline-list"></div></dialog>
   <dialog id="typography"><div class="dialog-head"><h2>Reading settings</h2><button data-close aria-label="Close settings">×</button></div><label>Text size <input id="font-size" type="number" min="12" max="40" value="18"></label><label>Line spacing <select id="line-height"><option>1.4</option><option selected>1.65</option><option>1.9</option><option>2.2</option></select></label><label>Margins <select id="margin"><option value="12">Narrow</option><option value="24" selected>Comfortable</option><option value="40">Wide</option></select></label><label class="check"><input id="wrap" type="checkbox" checked>Wrap plain text</label></dialog>
   <dialog id="appearance"></dialog>
-  <dialog id="shortcuts"><div class="dialog-head"><h2>Keyboard shortcuts</h2><button data-close aria-label="Close shortcuts">×</button></div><dl><dt>Next / previous page</dt><dd>PgDn / PgUp</dd><dt>Page mode navigation</dt><dd>Right / Left</dd><dt>Next / previous screen</dt><dd>Space / Shift Space</dd><dt>Scroll</dt><dd>Up / Down</dd><dt>First / last location</dt><dd>Home / End</dd><dt>Go to location</dt><dd>Ctrl G</dd><dt>Back after a jump</dt><dd>Alt Left</dd><dt>Open file</dt><dd>Ctrl O</dd><dt>Document library</dt><dd>Ctrl B</dd><dt>Resize library (divider focused)</dt><dd>Left / Right, Home / End, Enter</dd><dt>Pin / size lock</dt><dd>Ctrl Shift T / L</dd><dt>Fit page / width</dt><dd>Ctrl 0 / 2</dd><dt>Two-page spread</dt><dd>Ctrl 3</dd><dt>Zoom / text size</dt><dd>Ctrl + / −</dd><dt>Hand tool (pan a zoomed page)</dt><dd>H · or middle-drag</dd><dt>Find in document</dt><dd>Ctrl F</dd><dt>Command palette</dt><dd>Ctrl K</dd><dt>Dismiss a dialog</dt><dd>Escape</dd></dl></dialog>
+  <dialog id="shortcuts"><div class="dialog-head"><h2>Keyboard shortcuts</h2><button data-close aria-label="Close shortcuts">×</button></div><dl id="shortcut-list"></dl></dialog>
   <dialog id="delete-data"><h2>Delete saved reading data?</h2><p>This removes saved positions and reading settings. Your documents and recent-file list remain. The current position will be saved again when you navigate.</p><div class="dialog-actions"><button data-close>Cancel</button><button id="confirm-delete" class="danger">Delete reading data</button></div></dialog>
   <input id="file-input" type="file" accept=".pdf,.epub,.md,.markdown,.txt,.png,.jpg,.jpeg,.webp,.gif,.avif,.bmp" hidden>`;
 
@@ -102,17 +92,11 @@ function updateViewControls() {
   $('filekind').textContent = `${active.format.toUpperCase()} · ${kind}${pan.hand ? ' · Hand' : ''}`;
   $('filekind').title = waiting;
   const spreads = !!reader.spreads, spread = spreads && options.spread;
-  const toggles = [$<HTMLButtonElement>('spread-toggle'), $<HTMLButtonElement>('view-spread')];
-  for (const button of toggles) {
-    button.setAttribute('aria-pressed', String(spread));
-    if (waiting) button.setAttribute('aria-description', waiting); else button.removeAttribute('aria-description');
-  }
-  $<HTMLButtonElement>('spread-toggle').disabled = !spreads;
-  $<HTMLButtonElement>('spread-toggle').title = waiting;
+  const spreadButton = $('view-spread');
+  spreadButton.setAttribute('aria-pressed', String(spread));
+  if (waiting) spreadButton.setAttribute('aria-description', waiting); else spreadButton.removeAttribute('aria-description');
   $('view-spread').title = waiting ? `Two-page spread (Ctrl 3) · ${waiting}` : 'Two-page spread (Ctrl 3)';
   $('view-single').setAttribute('aria-pressed', String(!spread));
-  const cover = $<HTMLButtonElement>('cover-toggle');
-  cover.disabled = !spread || reader.mode !== 'fixed'; cover.setAttribute('aria-pressed', String(options.cover));
   $('view-layout').hidden = !spreads;
   $('view-controls').hidden = !pan.pannable;
   if (!pan.pannable) return;
@@ -164,8 +148,8 @@ function flush(): Promise<void> {
 }
 setInterval(() => { if (dirty) void flush(); }, 1500);
 function showDialog(id: string) { $(id) instanceof HTMLDialogElement && ($<HTMLDialogElement>(id).showModal()); }
-function closeDialog(dialog: HTMLDialogElement) { dialog.close(); activeHost?.focus(); $('menu-toggle').setAttribute('aria-expanded', 'false'); }
-document.querySelectorAll<HTMLDialogElement>('dialog').forEach(dialog => { dialog.addEventListener('close', () => { activeHost?.focus(); if (dialog.id === 'menu') $('menu-toggle').setAttribute('aria-expanded', 'false'); }); });
+function closeDialog(dialog: HTMLDialogElement) { dialog.close(); activeHost?.focus(); }
+document.querySelectorAll<HTMLDialogElement>('dialog').forEach(dialog => { dialog.addEventListener('close', () => activeHost?.focus()); });
 document.querySelectorAll<HTMLElement>('[data-close]').forEach(button => button.onclick = () => closeDialog(button.closest('dialog')!));
 const library = createLibrary($('library-root'), {
   open: path => load(() => openLibraryDocument(path), path.split(/[\\/]/).pop()),
@@ -175,7 +159,7 @@ $('library-toggle').onclick = () => library.toggle();
 
 /**
  * The palette is mounted after the actions it dispatches, since `run` closes over `action`
- * and `library`. It shares the dispatcher with the menu rather than reimplementing commands.
+ * and `library`. The ··· button and Ctrl+K both open it; it is the only overflow surface.
  */
 let palette: ReturnType<typeof createPalette> | undefined;
 function openPalette() {
@@ -184,7 +168,9 @@ function openPalette() {
     // above (which focuses the reading surface) never attaches to it; the palette owns its focus.
     palette = createPalette({ hasDocument: () => Boolean(reader), desktop, run: id => command(id) });
     document.body.append(palette.element);
+    palette.element.addEventListener('close', () => $('menu-toggle').setAttribute('aria-expanded', 'false'));
   }
+  $('menu-toggle').setAttribute('aria-expanded', 'true');
   palette.open();
 }
 
@@ -200,10 +186,16 @@ const findBar = createFindBar({
 // Inside the reading panel, so it pushes the document down rather than covering it.
 $('workspace').prepend(findBar.element);
 
-/** Runs a command by catalog id. Every entry point (palette, menu, keyboard) goes through here. */
+/** Fills the shortcut reference from the command catalog, so it cannot drift from the bindings. */
+function renderShortcuts() {
+  const list = $('shortcut-list');
+  list.replaceChildren(...shortcutReference().flatMap(([name, keys]) => { const term = document.createElement('dt'); term.textContent = name; const value = document.createElement('dd'); value.textContent = keys; return [term, value]; }));
+}
+
+/** Runs a command by catalog id. Every entry point (palette, toolbar, keyboard) goes through here. */
 async function command(id: string) {
   // The catalog's declared requirements are enforced here rather than by each caller, so the
-  // keyboard, the menu and the palette cannot drift into different behaviour.
+  // keyboard and the palette cannot drift into different behaviour.
   const entry = COMMANDS.find(candidate => candidate.id === id);
   const reason = entry && unavailableReason(entry, { hasDocument: Boolean(reader), desktop });
   if (reason) { notify(reason); return; }
@@ -279,7 +271,7 @@ $('position').onclick = jump;
 $('jump').querySelector('form')!.onsubmit = event => { event.preventDefault(); void reader?.goTo($<HTMLInputElement>('target').value.trim()).then(() => closeDialog($<HTMLDialogElement>('jump'))).catch(error => { $('jump-error').textContent = String(error instanceof Error ? error.message : error); }); };
 async function toggle(which: 'pin' | 'lock') { if (!desktop) { notify('Pin and size lock are available in the desktop app.'); return; } try { updateWindow(await native(`set_${which}`, { enabled: !(which === 'pin' ? windowState.pinned : windowState.locked) })); } catch (error) { fail(error); } }
 $('pin').onclick = () => void toggle('pin'); $('lock').onclick = () => void toggle('lock');
-$('menu-toggle').onclick = () => { $('appearance-summary').textContent = appearanceSummary(); $('menu-toggle').setAttribute('aria-expanded', 'true'); showDialog('menu'); };
+$('menu-toggle').onclick = () => openPalette();
 async function changeOptions(next: Partial<ReaderOptions>) { if (!reader) return; const previous = options; options = { ...options, ...next }; try { await reader.setOptions(options); showPosition(reader.getPosition()); } catch (error) { options = previous; fail(error); } }
 async function action(name: string) {
   if (name === 'goto') jump();
@@ -293,12 +285,11 @@ async function action(name: string) {
   else if (name === 'smaller' || name === 'larger') { const delta = name === 'larger' ? 1 : -1; await changeOptions(reader?.mode === 'fixed' ? { zoom: Math.round(Math.max(.25, Math.min(4, options.zoom + delta * .1)) * 100) / 100 } : { fontSize: Math.max(12, Math.min(40, options.fontSize + delta * 2)) }); }
   else if (name === 'type') { $<HTMLInputElement>('font-size').value = String(options.fontSize); $<HTMLSelectElement>('line-height').value = String(options.lineHeight); $<HTMLSelectElement>('margin').value = String(options.margin); $<HTMLInputElement>('wrap').checked = options.wrap; showDialog('typography'); }
   else if (name === 'outline') { const list = $('outline-list'); list.replaceChildren(); const entries = reader?.outline() ?? []; if (!entries.length) list.textContent = 'No contents outline in this document.'; for (const item of entries) { const button = document.createElement('button'); button.textContent = item.label; button.onclick = () => { void reader?.goTo(item.target).then(() => closeDialog($<HTMLDialogElement>('contents'))).catch(fail); }; list.append(button); } showDialog('contents'); }
-  else if (name === 'shortcuts') showDialog('shortcuts');
+  else if (name === 'shortcuts') { renderShortcuts(); showDialog('shortcuts'); }
   else if (name === 'clear-data') showDialog('delete-data');
   else if (name === 'clear-recents') { if (desktop) await native('clear_recents'); $('recents').replaceChildren(); notify('Recent-file list cleared. Documents and saved positions are unchanged.'); }
   else if (['back', 'start', 'end', 'screen-next', 'screen-previous'].includes(name)) await navigate(name as Parameters<ReaderAdapter['navigate']>[0]);
 }
-document.querySelectorAll<HTMLButtonElement>('[data-action]').forEach(button => button.onclick = () => { closeDialog($<HTMLDialogElement>('menu')); void command(button.dataset.action!).catch(fail); });
 for (const id of ['font-size', 'line-height', 'margin', 'wrap']) $(id).onchange = () => { const fontSize = Number($<HTMLInputElement>('font-size').value); if (fontSize < 12 || fontSize > 40) return; void changeOptions({ fontSize, lineHeight: Number($<HTMLSelectElement>('line-height').value), margin: Number($<HTMLSelectElement>('margin').value), wrap: $<HTMLInputElement>('wrap').checked }); };
 $('confirm-delete').onclick = () => { void (async () => { await flush(); if (desktop) await native('clear_reading_data'); else for (const key of Object.keys(localStorage)) if (key.startsWith('hold-my-brief:')) localStorage.removeItem(key); dirty = false; closeDialog($<HTMLDialogElement>('delete-data')); notify('Saved reading data deleted. Your documents are unchanged.'); })().catch(fail); };
 
@@ -313,7 +304,7 @@ document.addEventListener('keydown', event => {
   // Ctrl+K is checked before the command table: it opens the palette and needs no document.
   if (shortcutFor(event) === 'command-palette') { event.preventDefault(); openPalette(); return; }
   const key = event.key.toLowerCase(); let operation: (() => void) | undefined;
-  // Catalog shortcuts go through the same dispatcher as the menu and the palette.
+  // Catalog shortcuts go through the same dispatcher as the palette.
   const shortcut = shortcutFor(event);
   if (shortcut === 'back') operation = () => void navigate('back');
   else if (shortcut) operation = () => void command(shortcut).catch(fail);

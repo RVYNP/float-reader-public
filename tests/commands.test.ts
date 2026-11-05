@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { COMMANDS, INTERFACE_SHORTCUTS, SHORTCUTS, groupCommands, scoreCommand, searchCommands, shortcutFor, unavailableReason, type Command } from '../src/commands';
+import { COMMANDS, INTERFACE_SHORTCUTS, SHORTCUTS, shortcutReference, groupCommands, scoreCommand, searchCommands, shortcutFor, unavailableReason, type Command } from '../src/commands';
 
 const byId = (id: string): Command => {
   const found = COMMANDS.find(command => command.id === id);
@@ -73,6 +73,14 @@ describe('shortcut matching', () => {
       if (INTERFACE_SHORTCUTS.includes(shortcut.id)) continue;
       expect(COMMANDS.some(command => command.id === shortcut.id), shortcut.id).toBe(true);
     }
+  });
+
+  it('lists every catalog shortcut in the reference, so the dialog cannot drift from the bindings', () => {
+    const reference = shortcutReference();
+    for (const command of COMMANDS.filter(entry => entry.shortcut)) {
+      expect(reference.some(([, keys]) => keys === command.shortcut), command.id).toBe(true);
+    }
+    expect(reference.some(([name, keys]) => name === 'Command palette' && keys === 'Ctrl K')).toBe(true);
   });
 
   it('keeps interface shortcuts out of the dispatchable catalog', () => {

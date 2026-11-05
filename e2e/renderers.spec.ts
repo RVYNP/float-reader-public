@@ -228,8 +228,7 @@ test('library drawer floats over the page and never resizes it, while drag, keyb
   const handle = page.getByRole('separator', { name: 'Resize library' });
   const panel = page.locator('.library-panel'), host = page.locator('.pdf-reader'), workspace = page.locator('#workspace');
   const canvas = page.locator('.pdf-page canvas');
-  // The library is open by default at >=720 px, so close it to measure the untouched page first.
-  await page.locator('#library-toggle').click();
+  // The library starts closed at every width, so the untouched page can be measured first.
   await expect(page.locator('#library-root')).toBeHidden();
   // Everything the drawer must leave alone: the reading panel's box, its client width, the page
   // box and the backing bitmap. Any of those changing when the drawer opens, is dragged or is
@@ -318,8 +317,9 @@ test('PDF page-bitmap cache never reuses pixels across rotation', async ({ page 
     return count ? sum / count / height : -1;
   });
   const rotate = async () => {
-    await page.getByRole('button', { name: 'Reader menu' }).click();
-    await page.getByRole('button', { name: 'Rotate page 90°' }).click();
+    await page.getByRole('button', { name: 'Commands' }).click();
+    await page.locator('#palette-input').fill('Rotate page');
+    await page.keyboard.press('Enter');
     await expect(page.locator('.pdf-render-status')).toHaveCount(0);
     await expect(page.locator('.textLayer')).toContainText('First page');
   };

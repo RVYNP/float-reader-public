@@ -1,7 +1,8 @@
 import { test, expect } from '@playwright/test';
 test('compact text workflow, semantic resume, invalid replacement preserves document', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Hand it over.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Hold My Brief' })).toBeAttached();
+  await expect(page.getByRole('button', { name: /Open…/ })).toBeVisible();
   const text = Array.from({ length: 240 }, (_, i) => `Line ${i + 1}: A quiet place to read, beside the work in progress.`).join('\n');
   const file = { name: 'reading.txt', mimeType: 'text/plain', buffer: Buffer.from(text) };
   await page.locator('#file-input').setInputFiles(file);
@@ -31,8 +32,10 @@ test('Markdown uses safe content, an outline and compact accessible controls', a
   expect(await page.evaluate(() => (window as unknown as {pwned?: boolean}).pwned)).toBeUndefined();
   expect(remote).toEqual([]);
   await page.setViewportSize({ width: 360, height: 420 });
-  await page.getByRole('button', { name: 'Reader menu' }).click();
-  await page.getByRole('button', { name: 'Contents', exact: true }).click();
+  // The ··· button is the one overflow: it opens the command palette.
+  await page.getByRole('button', { name: 'Commands' }).click();
+  await page.locator('#palette-input').fill('Contents');
+  await page.keyboard.press('Enter');
   await page.locator('#outline-list').getByRole('button', { name: 'Next steps' }).click();
   await expect(page.locator('#position')).toContainText('Next steps');
   await expect(page.getByRole('button', { name: 'Pin', exact: true })).toBeVisible();
@@ -44,8 +47,9 @@ test('appearance previews on hover, keeps on click, restores on Escape and persi
   await expect(root).toHaveAttribute('data-theme', 'light');
   await page.emulateMedia({ colorScheme: 'dark' });
   await expect(root).toHaveAttribute('data-theme', 'dark');
-  await page.getByRole('button', { name: 'Reader menu' }).click();
-  await page.getByRole('button', { name: /Appearance/ }).click();
+  await page.getByRole('button', { name: 'Commands' }).click();
+  await page.locator('#palette-input').fill('Appearance');
+  await page.keyboard.press('Enter');
   const sheet = page.locator('#appearance');
   await sheet.getByRole('radio', { name: 'Arctic' }).hover();
   await expect(root).toHaveAttribute('data-palette', 'arctic');

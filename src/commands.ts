@@ -116,6 +116,27 @@ export function shortcutFor(event: { key: string; ctrlKey: boolean; altKey: bool
     && Boolean(shortcut.shift) === event.shiftKey)?.id;
 }
 
+/**
+ * Keys that move through a document or the interface rather than run a catalog command.
+ * They are listed in the shortcut reference beside the catalog's own shortcuts.
+ */
+const INTERFACE_KEYS: readonly (readonly [string, string])[] = [
+  ['Next / previous page', 'PgDn / PgUp'],
+  ['Page mode navigation', 'Right / Left'],
+  ['Scroll', 'Up / Down'],
+  ['First / last location', 'Home / End'],
+  ['Hand tool (pan a zoomed page)', 'H · or middle-drag'],
+  ['Resize library (divider focused)', 'Left / Right, Home / End, Enter'],
+  ['Command palette', 'Ctrl K'],
+  ['Dismiss a dialog', 'Escape'],
+];
+
+/** Rows for the keyboard shortcut reference: every catalog command with a shortcut, then interface keys. */
+export function shortcutReference(commands: readonly Command[] = COMMANDS): [string, string][] {
+  const fromCatalog = commands.filter(command => command.shortcut).map(command => [command.label.replace(/…$/, ''), command.shortcut!] as [string, string]);
+  return [...fromCatalog, ...INTERFACE_KEYS.map(([name, keys]) => [name, keys] as [string, string])];
+}
+
 /** Why a command cannot run right now, or undefined when it can. */
 export function unavailableReason(command: Command, context: { hasDocument: boolean; desktop: boolean }): string | undefined {
   if (command.requiresDocument && !context.hasDocument) return 'Open a document first';

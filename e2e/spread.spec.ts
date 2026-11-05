@@ -39,9 +39,10 @@ async function fixedEpub(pages: number, rtl = false) {
 const pageBoxes = (page: Page) => page.locator('.pdf-spread .pdf-page').evaluateAll(elements => elements.map(element => {
   const box = element.getBoundingClientRect(); return { x: box.x, y: box.y, width: box.width, height: box.height };
 }));
-const menu = async (page: Page, name: RegExp) => {
-  await page.getByRole('button', { name: 'Reader menu' }).click();
-  await page.getByRole('button', { name }).click();
+const menu = async (page: Page, name: string) => {
+  await page.getByRole('button', { name: 'Commands' }).click();
+  await page.locator('#palette-input').fill(name);
+  await page.keyboard.press('Enter');
 };
 
 test('PDF two-page spread pairs, navigates, snaps, waits for width and resumes', async ({ page }) => {
@@ -106,7 +107,7 @@ test('PDF two-page spread pairs, navigates, snaps, waits for width and resumes',
   await expect(page.locator('#progress')).toHaveAttribute('aria-valuenow', '2');
 
   // Without a cover page, pairs start at page 1 and the odd final page stands alone on the left.
-  await menu(page, /Cover page alone/);
+  await menu(page, 'Cover page alone');
   await expect(page.locator('#position')).toContainText('Pages 1–2 of 7');
   await page.locator('.reader-host').focus(); await page.keyboard.press('End');
   await expect(page.locator('#position')).toContainText('Page 7 of 7');
@@ -160,7 +161,7 @@ test('fixed-layout EPUB shows spreads with the cover alone and moves by spread',
   await page.screenshot({ path: 'test-results/reader-epub-spread.png' });
   await page.keyboard.press('PageDown');
   await expect(page.locator('#position')).toContainText('Pages 4–5 of 5');
-  await menu(page, /Cover page alone/);
+  await menu(page, 'Cover page alone');
   await expect(page.locator('#position')).toContainText('Pages 3–4 of 5');
   await page.locator('.reader-host').focus(); await page.keyboard.press('End');
   await expect(page.locator('#position')).toContainText('Page 5 of 5');

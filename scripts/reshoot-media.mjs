@@ -156,8 +156,8 @@ const browser = await chromium.launch(existsSync(CHROME) ? { executablePath: CHR
   const { ctx, page } = await open(browser);
   await loadFile(page, BOOK, 6000);
   await page.click('#menu-toggle');
-  await page.waitForTimeout(500);
-  await page.getByRole('button', { name: /Appearance/ }).click();
+  await page.fill('#palette-input', 'Appearance');
+  await page.keyboard.press('Enter');
   await page.waitForTimeout(900);
   await shot(page, 'appearance.png');
   await ctx.close();

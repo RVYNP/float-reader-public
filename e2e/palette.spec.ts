@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test';
 
 /**
- * The command palette is the keyboard route to the actions the ··· menu lists, so these tests
+ * The command palette is the one overflow surface (Ctrl+K or the ··· button), so these tests
  * check the three things that would break it: opening it without a document, filtering and
- * choosing, and the fact that a chosen command really runs the same code path as the menu.
+ * choosing, and the fact that a chosen command really runs the same code path as the toolbar.
  */
 
 const textDocument = { name: 'palette.txt', mimeType: 'text/plain', buffer: Buffer.from(Array.from({ length: 200 }, (_, i) => `Line ${i + 1}: Reading beside the work.`).join('\n')) };
