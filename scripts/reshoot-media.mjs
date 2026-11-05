@@ -41,8 +41,8 @@ const README_WIDTH = 880;
 const GUTTER = 14;
 const SHEET_CSS = `body { margin: 0; background: #fff; }
   img { display: block; outline: 1px solid rgba(0,0,0,.08); outline-offset: -1px; }
-  .label { font: 400 10px/14px 'JetBrains Mono', 'Cascadia Mono', Consolas, ui-monospace, monospace;
-           letter-spacing: .6px; text-transform: uppercase; color: #6e695e; }`;
+  .label { font: 400 11px/15px 'JetBrains Mono', 'Cascadia Mono', Consolas, ui-monospace, monospace;
+           letter-spacing: 1.5px; text-transform: uppercase; color: #6e695e; }`;
 
 async function open(browser, { viewport = COMPACT, palette = 'brief' } = {}) {
   const ctx = await browser.newContext({ viewport, deviceScaleFactor: 2, colorScheme: 'light' });
@@ -182,10 +182,13 @@ const browser = await chromium.launch(existsSync(CHROME) ? { executablePath: CHR
     cells.push(await shot(page));
     await ctx.close();
   }
+  // Matches the Themes figure in the README mock (floatreader.pen): mono labels 8 px above each card,
+  // 7 px corners with a 20% muted hairline, and the gutter repeated as padding around the set.
   const sheet = await browser.newPage({ viewport: { width: README_WIDTH, height: 400 }, deviceScaleFactor: 3 });
   await sheet.setContent(`<style>${SHEET_CSS}
-    .grid { display: grid; grid-template-columns: repeat(5, 1fr); column-gap: ${GUTTER}px; row-gap: 8px; width: ${README_WIDTH}px; }
-    img { width: 100%; }
+    .grid { box-sizing: border-box; display: grid; grid-template-columns: repeat(5, 1fr); column-gap: ${GUTTER}px; row-gap: 8px;
+            width: ${README_WIDTH}px; padding: ${GUTTER}px; }
+    img { width: 100%; border-radius: 7px; outline: none; box-shadow: 0 0 0 1px rgba(110,105,94,.2); }
   </style><div class="grid">${families.map(f => `<div class="label">${f}</div>`).join('')}${cells.map(c => `<img src="${dataUrl(c)}">`).join('')}</div>`);
   await sheet.locator('.grid').screenshot({ path: join(OUT, 'themes.png') });
   await sheet.close();
