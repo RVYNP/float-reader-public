@@ -38,6 +38,10 @@ Open the menu and choose **Appearance…** to open the Appearance panel at the b
 Choices are saved on this computer and applied before the window first paints, so there is no flash
 of the wrong theme. The native title bar follows the light or dark mode.
 
+Fonts are not bundled. The interface asks for Inter and JetBrains Mono and falls back to the system
+faces your computer already has, so nothing is downloaded to draw the window. Install both fonts if
+you want the interface set exactly as designed.
+
 The theme design is inspired by [Tern](https://stencil.so/tern) by Stencil, and the Graphite theme
 uses Tern's default palette. See [Credits](../README.md#credits).
 
