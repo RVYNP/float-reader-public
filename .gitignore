@@ -13,4 +13,3 @@ public/pdfjs/
 !.env.example
 .DS_Store
 desktop.ini
-docs/media/hero-app-*.png
