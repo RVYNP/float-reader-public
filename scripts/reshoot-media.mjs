@@ -182,8 +182,8 @@ const browser = await chromium.launch(existsSync(CHROME) ? { executablePath: CHR
     cells.push(await shot(page));
     await ctx.close();
   }
-  // Matches the Themes figure in the README mock (floatreader.pen): mono labels 8 px above each card,
-  // 7 px corners with a 20% muted hairline, and the gutter repeated as padding around the set.
+  // Mono labels 8 px above each card, 7 px corners with a 20% muted hairline, and the gutter
+  // repeated as padding around the set.
   const sheet = await browser.newPage({ viewport: { width: README_WIDTH, height: 400 }, deviceScaleFactor: 3 });
   await sheet.setContent(`<style>${SHEET_CSS}
     .grid { box-sizing: border-box; display: grid; grid-template-columns: repeat(5, 1fr); column-gap: ${GUTTER}px; row-gap: 8px;
