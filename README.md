@@ -1,12 +1,5 @@
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/media/hero-dark.png">
-    <img src="docs/media/hero-light.png" alt="Hold My Brief open beside other work, showing a page of a 19th century print manual in a small reading window" width="880">
-  </picture>
-</p>
-
-<p align="center">
-  <img src="docs/media/wordmark.png" alt="Hold My Brief wordmark" width="880">
+  <img src="docs/media/hero.png" alt="Hold My Brief with a 19th century print manual open as a two-page spread, beside the compact window reading Pride and Prejudice" width="880">
 </p>
 
 <h1 align="center">Hold My Brief</h1>
@@ -89,41 +82,26 @@ computer.
 
 ## A closer look
 
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/media/spread-dark.png">
-    <img src="docs/media/spread-light.png" alt="Pages 48 and 49 of the print manual shown side by side as an open book" width="880">
-  </picture>
-  <br><sub><b>Two-page view</b> lays out a PDF like an open book</sub>
-</p>
-
 <table>
   <tr>
-    <td align="center" width="33%"><img src="docs/media/reading-epub.png" alt="Reading an EPUB guide in the compact window"><br><sub><b>Reading a book</b> at the default 420 × 620 size</sub></td>
-    <td align="center" width="33%"><img src="docs/media/hand-tool.png" alt="A PDF page zoomed to 120% with the hand tool switched on in the floating zoom controls"><br><sub><b>Zoom in</b>, then drag the page with the hand tool</sub></td>
-    <td align="center" width="33%"><img src="docs/media/appearance.png" alt="The Appearance panel with theme cards"><br><sub><b>Appearance</b>: hover to preview, click to keep</sub></td>
+    <td align="center" width="50%"><img src="docs/media/hand-tool.png" alt="A PDF page zoomed to 120% with the hand tool switched on in the floating zoom controls"><br><sub><b>Zoom in</b>, then drag the page with the hand tool</sub></td>
+    <td align="center" width="50%"><img src="docs/media/appearance.png" alt="The Appearance panel with theme cards over a book"><br><sub><b>Appearance</b>: hover to preview, click to keep</sub></td>
   </tr>
 </table>
 
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/media/library-dark.png">
-    <img src="docs/media/library-light.png" alt="The document library floating over a PDF, with the page unreduced behind it" width="880">
-  </picture>
+  <img src="docs/media/library.png" alt="The document library floating over a PDF, with the page unreduced behind it" width="880">
   <br><sub><b>The library</b> floats over the page. Put it on either side and the page keeps its place</sub>
 </p>
 
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/media/library-resize-dark.gif">
-    <img src="docs/media/library-resize-light.gif" alt="The library opens over the page, is dragged wider, reset with a double-click and closed, and the page never moves" width="880">
-  </picture>
+  <img src="docs/media/library-resize.gif" alt="The library opens over the page, is dragged wider, reset with a double-click and closed, and the page never moves" width="880">
   <br><sub><b>Make it wider</b>: open the drawer, drag the divider, double-click to reset. The page never moves</sub>
 </p>
 
 <p align="center">
-  <img src="docs/media/themes.png" alt="The same page in the Brief, Lilac, Birch, Graphite and Arctic themes, light and dark" width="880">
-  <br><sub><b>Five theme families</b>, each in light and dark. Brief is the default</sub>
+  <img src="docs/media/themes.png" alt="The opening of Pride and Prejudice in the Brief, Lilac, Birch, Graphite and Arctic themes" width="880">
+  <br><sub><b>Five theme families</b>, each with a light and a dark version. Brief is the default</sub>
 </p>
 
 ## Private by design
@@ -214,28 +192,6 @@ npm run dev         # or try the interface in a browser
 | [Requirements](docs/floating-reader-prd.md) · [Research](docs/floating-reader-research-2026-10-22.md) | Why it works the way it does |
 | [Status](docs/floating-reader-implementation.md) · [Performance](docs/floating-reader-performance.md) · [macOS audit](docs/floating-reader-macos-and-performance-audit.md) | What's verified, what's measured, what's next |
 
-## Brand
-
-The identity is deliberately plain: **the mark is the name, set once.** An acid period is the only
-colour move, and everything else is paper, ink and white space.
-
-| | |
-| --- | --- |
-| **Mark** | *Hmb.* in Inter Bold (capped at 700, never heavier), capital H, acid period |
-| **Colour** | Warm paper `#F4F1EA` · true ink `#1A1815` · one acid accent `#E13A3A`, used once per composition |
-| **Brief blue** | `#7ADBFE` floods fields (posters, covers, the icon) and stays out of the interface |
-| **Type** | Inter for the interface, JetBrains Mono for the machine voice: positions, paths, statuses |
-| **Motion** | Slow enough to feel expensive: clip settles at 340 ms, ribbon marks in 500 ms, dither resolves in 900 ms |
-
-The **Brief** theme family ships all of this as the app's default appearance, and the app icon is
-the mark itself. Colour, type and motion are documented in full in the brand guidelines that
-accompany this project.
-
-**Fonts are not bundled.** The interface asks for Inter and JetBrains Mono, then falls back to the
-system faces your computer already has. Nothing is downloaded to render the UI, which keeps the
-promise that the app works offline and never phones home. Install Inter and JetBrains Mono if you
-want the interface set exactly as designed.
-
 ## Credits
 
 The look and theme system are inspired by [Tern](https://stencil.so/tern) by
@@ -244,12 +200,10 @@ picker that previews on hover shaped Hold My Brief's Appearance panel. The Graph
 the default palette in [Tern's published theme tokens](https://docs.stencil.so/tern/styles/variables.html).
 Thank you to the Stencil team.
 
-The screenshots read freely redistributable documents: *The Half-Tone Process* (1895), a
-public-domain print manual scanned by the [Internet Archive](https://archive.org/details/halftoneprocessp00verf_0);
-Adobe's Photoshop UXP guide, published under the Apache License 2.0; and, for the theme sheet,
-the public-domain opening of *Pride and Prejudice*. No in-copyright scans are committed to this
-repository. `scripts/reshoot-media.mjs` regenerates the set from documents you supply, and the
-hero image is composed from those shots in the design file.
+The screenshots read public-domain documents: *The Half-Tone Process* (1895), a print manual
+scanned by the [Internet Archive](https://archive.org/details/halftoneprocessp00verf_0), and
+Jane Austen's *Pride and Prejudice*. No in-copyright scans are committed to this repository.
+`scripts/reshoot-media.mjs` regenerates every still, the hero included, from documents you supply.
 
 ## License
 

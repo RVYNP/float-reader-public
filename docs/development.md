@@ -107,22 +107,22 @@ the NSIS installer on Windows, and bundles the `.app` on macOS.
 
 ## README media
 
-The screenshots in `docs/media/` come from `scripts/reshoot-media.mjs`. Start the browser preview
-(`npm run dev`, port 1420), then pass a public-domain PDF and a permissively licensed EPUB. Pick a PDF
-with a text layer: scanned pages without one carry an "Image-only page" note
+Every image in `docs/media/` is light mode, Brief theme, and comes from a script. Start the browser
+preview (`npm run dev`, port 1420), then pass a public-domain PDF and a public-domain EPUB book. Pick
+a PDF with a text layer: scanned pages without one carry an "Image-only page" note
 ([#16](https://github.com/RVYNP/hold-my-brief/issues/16)) that would land in every shot.
 
 ```bash
-node scripts/reshoot-media.mjs halftoneprocessp00verf_0.pdf Photoshop-UXP-Docs.epub
+node scripts/reshoot-media.mjs halftoneprocessp00verf_0.pdf "Pride and Prejudice.epub"
 ```
 
-It writes every still the README uses except the hero, including the five-family theme sheet, which
-it builds from the public-domain opening of *Pride and Prejudice*. The hero is a composite made in
-the design file (`floatreader.pen`, Hero frame of the README mock): the script writes the
-raw window shots it needs as `hero-app-light.png` and `hero-app-dark.png` (ignored by git), and the
-Hero frame is exported at 2× to `hero-light.png` and `hero-dark.png`.
+It writes every still the README uses. The hero (`hero.png`) and the five-family theme sheet
+(`themes.png`) are composed in the script: real window captures set in one row on white with 14 px
+gutters and square corners. The theme sheet reads the public-domain opening of *Pride and Prejudice*.
+On macOS the scripts use the pinned Chrome for Testing build; elsewhere they fall back to
+Playwright's Chromium (`npx playwright install chromium`).
 
-The animated library demo (`library-resize-light.gif` and `library-resize-dark.gif`) comes from
+The animated library demo (`library-resize.gif`) comes from
 `node scripts/record-library-demo.mjs halftoneprocessp00verf_0.pdf`. It drives the real interface
 with a drawn cursor, steps every CSS animation one frame at a time so each run is identical, and
 encodes with ffmpeg's two-pass palette (Homebrew's build; set `FFMPEG` to use another).
