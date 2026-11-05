@@ -119,6 +119,9 @@ node scripts/reshoot-media.mjs halftoneprocessp00verf_0.pdf "Pride and Prejudice
 It writes every still the README uses. The hero (`hero.png`) and the five-family theme sheet
 (`themes.png`) are composed in the script: real window captures set in one row on white with 14 px
 gutters and square corners. The theme sheet reads the public-domain opening of *Pride and Prejudice*.
+The desktop scene (`desktop.png`) pins the reader over a cluttered desktop whose editor and browser
+windows show this repository's own `src/style.css` and user guide. Install Inter and JetBrains Mono
+first so every capture uses the interface's real typefaces.
 On macOS the scripts use the pinned Chrome for Testing build; elsewhere they fall back to
 Playwright's Chromium (`npx playwright install chromium`).
 
