@@ -33,6 +33,11 @@ it never gets in the way, and pick up on the same passage tomorrow. It opens the
 actually read (PDF, EPUB books, Markdown, plain text and images), and your files never leave your
 computer.
 
+<p align="center">
+  <img src="docs/media/desktop.png" alt="Hold My Brief pinned in the top-right corner of a cluttered Windows desktop, above a code editor and a browser" width="880">
+  <br><sub><b>Pinned</b> above an editor, a browser and a desktop full of files</sub>
+</p>
+
 > **Note:** Hold My Brief was previously developed under the name **Float Reader**. The rename
 > moves the application-data folder (see the [user guide](docs/user-guide.md#saved-reading-data));
 > saved reading positions and libraries from Float Reader builds are not migrated.
